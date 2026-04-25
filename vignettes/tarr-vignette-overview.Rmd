@@ -14,19 +14,24 @@ editor_options:
     wrap: 72
 ---
 
-``` r
+```{r setup, include=FALSE}
+
+library(tidyverse, quietly = TRUE)
+library(tarr, quietly      = TRUE)
+
 # Setup for examples (feel free to change these defaults)
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = #>,
+  comment = "#>",
   fig.retina = 2,
   fig.width = 7,
   fig.height = 4.5,
   message = FALSE,
   warning = FALSE,
   echo = TRUE,
-  eval = FALSE
-)
+  eval = FALSE)
+
+
 ```
 
 ## Overview & goals
@@ -70,13 +75,6 @@ properly function. In addition it also installs tarr.pop for population
 figures and tarr.brand that makes Tarrant County branding colors and
 items available.
 
-```{r setup, echo=FALSE, warnings=FALSE, include=FALSE}
-# install.packages(tarr)                # if released on CRAN
-# remotes::install_github(<org>/<repo>) # dev version for future use. 
-library(tidyverse, quietly = TRUE)
-library(tarr, quietly      = TRUE)
-```
-
 #### Note
 
 Use of the package is expected to occur in the secure environment of the
@@ -108,15 +106,15 @@ with documents and data.
 | immunization | E:/Immunization | Immunization data |
 | flu | PublicHealth/Shared/EPI/Influenza | Influenza surveillance folder |
 
-Here is an example of using the `paths` variable to list all the \*.csv
-files in the data folder:
+Here is an example of using the `paths` variable to list all the files and folders in the 
+in the spatial folder:
 
-```{r paths}
+```{r paths, eval=TRUE}
 # The path to the data folder
-paths$data
+paths$spatial
 
-# Lit the csv file names in the data folder
-files <- list.files(path = paths$data, pattern = "\\.csv$")  # Search for csv by the file extension
+# Lit the file names in the spatial  folder
+files <- list.files(path = paths$spatial)  # Search for all files
 head(files)  # View the first six in the folder
 rm(files)
 ```
@@ -142,11 +140,12 @@ week number. This is useful if you want to calculate the MMWR week for
 dates like onset, birth, report, diagnosis, etc. Here's an example of
 using onset and getting the week number.
 
-```{r mmwr_week}
+```{r mmwr_week, eval=TRUE}
 
 # sample data
+data("your_data_frame_name", package = "tarr")
 foo_flu <- synthetic_outbreak |> 
-           filter(condition == "fooflu") 
+           dplyr::filter(condition == "fooflu") 
 
 # add the MMWR Week number when onset occurred
 foo_flu$mmwr_week <- mmwrWeek(foo_flu$onset)
@@ -175,7 +174,7 @@ event occurs. The ability to convert a week number to a date in a
 specific year also allows you to show different years data using the
 same date scale.
 
-```{r mmwr_begin_end}
+```{r mmwr_begin_end, eval=TRUE}
 # show dates and month information from mmwrWeek
 foo_flu <- foo_flu |> 
   head() |> 
@@ -211,7 +210,7 @@ string matching.
 The functions `only_digit(string)` and `mash_phone(string)` are
 synonymous, returning only digit characters.
 
-```{r mash_phone}
+```{r mash_phone, eval=TRUE}
 
 # phone numbers formatted differently
 phone_numbers <- c("817/321-4700", "817-321-2366", "(214)972-9840")
@@ -227,7 +226,7 @@ rm(phone_numbers)
 The `only_alpha()` and `mash_name()` functions are also synonymous,
 returning only alphabetic characters.
 
-```{r only_alpha}
+```{r only_alpha, eval=TRUE}
 addr_roads <- c("5001 Riverside", "1101 South Main Street", "Interstate 35", "Highway 287", "Hwy 10", "200 Weatherford Street")
   
 # only alphabetic characters
@@ -258,7 +257,7 @@ are used for this are:
 -   `yn_2_logical(vec)` takes a "Yes/No" vector and converts it to a
     logical vector. "Unknown" values are converted to NA.
 
-```{r yn_funcs}
+```{r yn_funcs, eval=TRUE}
 
 recovered <- sample(x = c("Yes", "No", "Unk"), size = 15, replace = TRUE, prob = c(0.50, 0.30, 0.20))
 print(recovered)
@@ -287,7 +286,7 @@ this concept using a template vector. The function attempts to convert
 vec1 to template vector passed as vec2 . It works well for base types
 where conversion in R is allowed.
 
-```{r type_conversion}
+```{r type_conversion, eval=TRUE}
 
 # Dates represented as character string all in year-month-day format
 char_dates <- c("2022-05-15", "2016/12/25", "1983-06-25")

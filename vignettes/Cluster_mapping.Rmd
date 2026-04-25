@@ -7,21 +7,15 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 ```
 
-```{r setup}
-library(tarr,  quietly = TRUE)
-library(sf,    quietly = TRUE)
-```
 
-
-
-## 4. GIS & clustering
+## GIS & clustering
 For spatial analysis, several base layers and functions are provided for mapping and clustering detection. The R package
 "sf" is used in most spatial transformations and analysis.  Geocoded data can be mapped both statically and interactively.
 
@@ -44,7 +38,10 @@ just takes one of the names in the table above and by default returns the layer 
 System (CRS) of '4326'. You can also use the base R function readRDS() and give it the path to the layer using the
 geo_sets list varibale.  Here is how each method can be used to load a layer.
 
-```{r reading_layers}
+```{r reading_layers, eval=TRUE}
+library(tarr,  quietly = TRUE)
+library(sf,    quietly = TRUE)
+
 # load and add city boundaries using readRDS and geo_sets
 other_counties <- readRDS(file = geo_sets$surrounding_borders)
 plot(x = st_geometry(other_counties), border = "grey60")
@@ -53,11 +50,11 @@ plot(x = st_geometry(other_counties), border = "grey60")
 tarr_border <- load_tarrant_spatial("tarrant_border")
 plot(x = st_geometry(tarr_border), border = "red", add = TRUE )
 
-rm(cities)
+rm(cities, other_counties, tarr_border)
 
 ```
 
-Density based algorithms are provided for idnetifying possible clusters.  
+Density based algorithms are provided for identifying possible clusters.  
 
 **Key functions**: `scan_cluster()` (DBSCAN/OPTICS/HDBSCAN), `autoplot.clustered()`, `plot.clustered()`, `scan_object()`, `get_unit()`, `load_tarrant_spatial()`, `map_theme`.
 
