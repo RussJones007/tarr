@@ -52,3 +52,5 @@ Suggests:
 RoxygenNote: 7.3.3
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+URL: https://github.com/RussJones007/tarr
+BugReports: https://github.com/RussJones007/tarr/issues
