@@ -31,7 +31,6 @@ encounters <- map(1:11,
   rep(30) |> 
   bind_rows()
 
-debug(case_interview_classifier)
 res <- case_interview_classifier(x = encounters$description, return_detail = TRUE)
 attempts <- case_interview_classifier(x = encounters$description, return_detail = TRUE, 
                                       extra_true = c(r"(\blvm\b)", 
