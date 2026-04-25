@@ -63,3 +63,18 @@
 #' @format of the vector is
 #' "Desired Name"  = "NBS Name"
 "simple_conditions"
+
+
+#' Encounters vector data frame
+#' 
+#' A data frame of case encounter descriptions from EpiTrax  Contains over 450 "encounters" aggregated form several epi
+#' investigators.  The data frame may be used in testing text classifiers, for example the [case_interview_classifier()]
+#' function is meant to find interviews done vs other actions shown in the note. The attempt_class field is a factor of
+#' attempts and interview by note as classified by manual review.  In addition to testing regular 
+#' expressions to classify the encounter notes, supervised machine models can be trained and then compared to the 
+#' test data set by using this data frame.   
+#' @format 
+#' * Description holds the text entered into the encounter description field
+#' * attempt_class is a factor of interview status - Attempted (all attempts to interview the case), Interview 
+#' (actually interviewed) , Not an attempt (e.g. record review, calling IP or docotro, ROI, etc)
+"encounter_description"
