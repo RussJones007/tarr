@@ -77,4 +77,4 @@
 #' * Description holds the text entered into the encounter description field
 #' * attempt_class is a factor of interview status - Attempted (all attempts to interview the case), Interview 
 #' (actually interviewed) , Not an attempt (e.g. record review, calling IP or docotro, ROI, etc)
-"encounter_description"
+"encounter_descriptions"

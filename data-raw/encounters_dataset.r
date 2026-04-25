@@ -9,5 +9,9 @@
 # ------------------------------------------------------------------------------------------------------------------->
 
 
-encounter_descriptions <- readr::read_csv("data-raw/Encounters.csv", col_types = "c", col_select = "Description")
+encounter_descriptions <- readr::read_csv("data-raw/Encounters.csv", 
+                                          col_types = c("cc"),
+                                          col_select = c("Description","attempt_class") 
+) |> 
+  dplyr::mutate(attempt_class = factor(attempt_class))
 usethis::use_data(encounter_descriptions, internal = FALSE, overwrite = TRUE)
