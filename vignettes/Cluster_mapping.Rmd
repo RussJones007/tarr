@@ -1,0 +1,95 @@
+---
+title: "Clusters and Mapping"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Clusters and Mapping}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(tarr,  quietly = TRUE)
+library(sf,    quietly = TRUE)
+```
+
+
+
+## 4. GIS & clustering
+For spatial analysis, several base layers and functions are provided for mapping and clustering detection. The R package
+"sf" is used in most spatial transformations and analysis.  Geocoded data can be mapped both statically and interactively.
+
+The named list variable `geo_sets` stores paths to often used base layers. For example `geo_sets$isd` returns the path to
+a layer of independent school districts. The next table shows the name and the layer available, all of which are polygons
+stored as "sf" objects and have a coordinate reference system set `epsg:4326`
+
+|Name             |Layer                                       |
+|:--------------- |:-------------------------------------------|
+|ZCTA             |Tarrant Zip Code Tabulation Areas           |
+|tarrant_border   |Tarrant County boundaries as a polygon      |
+|tarrant_tracts   |Census tracts in Tarrant County             |
+|tarrant_blocks   |Census blocks in Tarrant County             |
+|tarrant_cities   |Boundaries of partially or wholly contained cities|
+|surrounding_borders|Borders of counties surrounding Tarrant   |
+|isd              |Independent School Districts                |
+
+Each of the layers can be loaded using `load_tarrant_spatial()` or `readRDS()`.  The load_tarrant_spatial(.name, .crs)
+just takes one of the names in the table above and by default returns the layer by default with a Coordinate Reference
+System (CRS) of '4326'. You can also use the base R function readRDS() and give it the path to the layer using the
+geo_sets list varibale.  Here is how each method can be used to load a layer.
+
+```{r reading_layers}
+# load and add city boundaries using readRDS and geo_sets
+other_counties <- readRDS(file = geo_sets$surrounding_borders)
+plot(x = st_geometry(other_counties), border = "grey60")
+
+# load the Tarrant County border then add it to the map
+tarr_border <- load_tarrant_spatial("tarrant_border")
+plot(x = st_geometry(tarr_border), border = "red", add = TRUE )
+
+rm(cities)
+
+```
+
+Density based algorithms are provided for idnetifying possible clusters.  
+
+**Key functions**: `scan_cluster()` (DBSCAN/OPTICS/HDBSCAN), `autoplot.clustered()`, `plot.clustered()`, `scan_object()`, `get_unit()`, `load_tarrant_spatial()`, `map_theme`.
+
+```r
+# Optional basemap layers
+
+spat <- load_tarrant_spatial()
+
+# Ensure geometry 
+# cases_sf <- sf::st_as_sf(nbs, coords = c(lon,lat), crs = 4326)
+
+# Cluster (example: HDBSCAN)
+cl <- scan_cluster(
+  x = cases_sf,
+  method = hdbscan,
+  minPts = 5
+)
+
+# Visualize (ggplot)
+autoplot(cl) + map_theme
+
+# Or with tmap
+plot(cl)
+
+# Inspect clustering internals
+scan_object(cl)
+get_unit(cl)
+```
+
+**Tips**
+- Prefer a projected CRS for distance-based clustering (choose one appropriate for your county/state).
+- HDBSCAN handles variable density better; DBSCAN is fast for well-separated clusters.
+
+---
+

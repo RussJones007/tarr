@@ -1,0 +1,54 @@
+Package: tarr
+Type: Package
+Title: Tarrant County Epidemiology Division functions
+Version: 0.0.0.9256
+Authors@R: c(person("Russ", "Jones", role = c("aut", "cre"),
+  email = "RussJones007@yahoo.com"))
+Maintainer: Russ Jones <RussJones007@yahoo.com>
+Description: Several functions used by the Epidemiology Division to identify
+  clusters, load map layers, importing data from EpiTrax and NBS. 
+  Auto loads the tarr.pop and rage packages
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+Depends: 
+    R (>= 4.1),
+Imports:
+    ggmap (>= 2.7.9),
+    clipr (>= 0.7.0),
+    dplyr (>= 0.7.4),
+    ggplot2 (>= 3.1.0),
+    dbscan (>= 1.1),
+    purrr (>= 0.2.4),
+    rlang (>= 1.0.0),
+    ggthemes (>= 3.5.0),
+    lubridate,
+    progress,
+    readr,
+    scales,
+    stringdist,
+    stringr,
+    tidyr,
+    RColorBrewer,
+    sf,
+    zoo,
+    magrittr,
+    incidence2,
+    glue,
+    arrow,
+    janitor,
+    units (>= 0.8.0),
+    generics,
+    base,
+    rage,
+    tarr.pop,
+    checkmate,
+    stringi
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+RoxygenNote: 7.3.3
+Config/testthat/edition: 3
+VignetteBuilder: knitr

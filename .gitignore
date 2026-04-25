@@ -1,0 +1,9 @@
+inst/doc
+/doc/
+/Meta/
+.Rhistory
+.RData
+.Rproj.user
+man/*.Rd
+NAMESPACE
+*.tar.gz

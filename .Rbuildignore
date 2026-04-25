@@ -1,0 +1,10 @@
+^DocBuild\.r$
+^.*\.Rproj$
+^\.Rproj\.user$
+^test\.r$
+^data-raw$
+^scripts$
+^LICENSE\.md$
+
+^doc$
+^Meta$

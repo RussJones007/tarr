@@ -1,0 +1,169 @@
+---
+title: "The Tarr Package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{The Tarr Package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```r
+# Setup for examples (feel free to change these defaults)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = #>,
+  fig.retina = 2,
+  fig.width = 7,
+  fig.height = 4.5,
+  message = FALSE,
+  warning = FALSE,
+  echo = TRUE,
+  eval = FALSE
+)
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+## 1. Overview & goals The tarr package includes various functions and variables to assist Epidemiologists at the
+Tarrant County Public Health Department.  It was originally written to support disease data manipulation and creating
+charts.  Over time the functions, data sets, and list variables have been updated to simplify workflows and add 
+capabilities.
+
+Separate vignettes introduce different topics including:
+
+**Reading and Processing** NBS and EpiTrax data exports. This document covers the functions to read the data and how 
+master the master file of all case records is constructed and maintained.  Combining 
+level 
+**Ages and Age Groups** demonstrates the functions for calculating ges and age groups. I also covers the class "age_group"
+and how it can be used.
+**Map & cluster** describes the GIS layers provided, functions that aid mapping, and spatial cluster detection
+
+This vignette reviews installation, standard folders accessed, helpful variables provided, and useful helper functions.
+
+## 2. Installation & project setup
+The package is locally maintained and as of `r format(Sys.Date(), "%B %d, %Y")`, may be found on the Epidemiology shared
+drive in the "G:/Data/Packages/" folder as "tarr_0.0.0.xxxx.zip.  The xxxx is actually  number that changes as the
+package is updated. Several other packages are needed for tarr to operate properly. Since the package is not hosted on
+CRAN, dependencies are not automatically installed.  To address this, run the tarr_depend.r in RStudio.  This will
+install most, if not all, of the R packages needed for the tarr package to properly function.  In addition it also
+installs tarr.population for population figures and tarr.brand that makes Tarrant County branding colors and items
+available.
+
+```{r setup, echo=FALSE, warnings=FALSE, include=FALSE}
+# install.packages(tarr)                # if released on CRAN
+# remotes::install_github(<org>/<repo>) # dev version for future use. 
+library(tidyverse, quietly = TRUE)
+library(tarr, quietly      = TRUE)
+```
+
+Use of the package is expected to occur behind the county firewall in a secure environment, as the data used will 
+contain personal health information. You can practice using some of the functions outside of the county network
+by using the synthetic_outbreak data frame available within the package. 
+
+## 3. Standard folders
+The tarr package reads and processes data placed in standard folders or sub- folderson the Epidemiology shared drive (E:\)
+and shared data drive (G:\). The different folder paths are kept in a list variable called **paths** which references 
+several folders.  The table below shows the "path" to each folder referenced.  In turn each of those folders have 
+sub-folders with documents and data.
+
+
+
+|Name            |Folder                                      |Data Types                                |
+|:---------------|:-------------------------------------------|:-----------------------------------------|
+|data            |G:/Data/Commmunicable Disease/Current Year  |Exported csv files from EpiTrax and NBS   |
+|communicable    |G:/Data/Commmunicable Disease               |Parent folder for "data" folder           |
+|scripts         |G:/Data/Commmunicable Disease/R Scripts     |A folder of R scripts to work on exported data|
+|cities          |G:/Data/GIS/Shape Files/Tarrant/Cities      |GIS files for Tarrant Cities              |
+|spatial         |G:/Data/GIS/Shape Files                     |General GIS files with several subfolders |
+|population      |G:/Data/Population                          |Saved census/projections/estimates files  | 
+|monthReportCode |E:/Monthly Report/Code                      |The folder for monthly report R project   |
+|monthReport     |E:/Monthly Report                           |Subfolders of each months report          |
+|arbovirus       |E:/Arboviral Diseases                       |Arboviral disease data files and guidance |
+|immunization    |E:/Immunization                             |Immunization data                         |
+|flu             |PublicHealth/Shared/EPI/Influenza           |Influenza surveillance folder             |
+
+
+An example of using the paths variable. Say you want to list all the *.csv files in the data folder:
+
+```{r}
+# The path to the data older
+paths$data
+
+# Get the csv files in the older
+files <- list.files(path = paths$data, pattern = "\\.csv$")  # Search for csv as the file extension
+head(files)  # View the first six that were found
+rm(files)
+```
+
+---
+## 4. Miscellaneous helpers
+
+Common utility functions tha are useful in other contexts and across epi workflows.
+
+The mmwr_* functions are helpers to retreive weeks or dates when working with MMWR weeks also know as epi weeks.
+Given a date, such as an onset or other event date, the mmwrWeek() function returns the week number.  
+
+```r
+
+# sample data
+foo_flu <- filter(synthetic_outbreak, condition == "fooflu")
+
+# add a MMWR Week number 
+fooflu$mmwr_week <- mmwrWeek(fooflu$onset)
+
+# look at the first few records of those columns 
+fooflu$onset, mmwr_week) |> head()
+```
+
+
+You may wish to convert an MMWR week to an actual date in a given year.  Two functions can do that; mmwrWeekBegin() returns
+the date on the Sunday of the wee and mmwrWeekEnd() gives the Satruday of that week.  If you prefer the mid week dat,it's
+simple as giving a week number and year t mmwrWeekBegin() + 3, toget the Wednesday date. 
+
+```r mmwr_begin_end
+foo_flu |> 
+  head() |> 
+  mutate(begin_date = mmwrWeekBegin(weekNum = mmwrWeek, yr = 2020)) |> 
+  pull(begin_date)
+
+```
+
+----
+## 6. Population denominators
+
+Population pulls are provided by the companion package **tarr.population**.
+
+```r
+# Example (adapt to your dims)
+# pop <- tarr.population::population(
+#   year = 2023,
+#   area.name = Tarrant County,
+#   sex = c(Female,Male),
+#   age.char = levels(nbs$age_char),
+#   race = All, ethnicity = All
+# )
+
+# Compute rates after joining cases to denominators
+# rates <- dplyr::left_join(case_counts, pop, by = c(year,area.name,sex,age.char)) |>
+#   dplyr::mutate(rate = 1e5 * cases / population)
+```
+
+## 8. End‑to‑end mini example
+
+```r
+nbs <- nbs_import(data/nbs/) |> nbs_process()
+nbs$age       <- age_calc(nbs$birth_date, nbs$onset_date)
+nbs$age_group <- as.age_group(age_cat(nbs$age))
+
+cases_sf <- sf::st_as_sf(nbs, coords = c(lon,lat), crs = 4326)
+cl <- scan_cluster(cases_sf, method = hdbscan, minPts = 5)
+
+autoplot(cl) + map_theme
+```

@@ -1,0 +1,113 @@
+---
+title: "Disease Data Processing"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Disease Data Processing}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(tarr)
+```
+
+
+## 3. Reading case data
+Several functions are available to read and process EpiTrax or NBS reports.   
+
+### a. EpiTrax
+For EpiTrax exported reports use the function:
+
+` epitrax_import(
+  .file = NULL,
+  .include.all = FALSE,
+  .use_cache = TRUE,
+  .return_missing_county = FALSE.
+) ` 
+
+This function is used for many reports exported from EpiTrax. The path and name of the csv file should be passed to the  ".file" argument".  If ".file = NULL", which is the default, an interactive dialog is opened to choose a file. This can be easier than typing in the actual file name during an interactive session. Also by default, it will only return records that have a patient_lhd_case_status of "Probable" or "Confirmed".  If you  need all records, regardless of case status, use ".include.all = TRUE". 
+
+The function automatically looks for a file with the same name as the file name passed in ".file" except witih a "parquet" extension.  If epitrax_import() finds the  parquet file, the parquet file is loaded as it is much faster than reading and processing a raw csv file.  If you do not want this behavior, perhaps you update the csv file periodically, then use ".use_cache = FALSE".
+
+The final argument in epitrax_import() is ".return_missing_county".  By default it is set to FALSE.  When set to TRUE it
+will return records where the county is missing in the address at diagnosis field.  You can use the returned data frame to find the records in EpiTrax and correct them. 
+
+The epitrax_import() function will read and process any EpiTrax exported report in a csv file that contains at least the following columns (names are shortened for brevity):
+A person's first and last names, disease, event onset date, event type, birth date, birth sex, ethnicity, phone number reporting agency, MMWR year and week.
+
+Note that the returned data frame may contain duplicate persons or events. When exporting data from EpiTrax there are some data elements that will cause duplicate person and events to be exported. For example, Encounters or Notes will cause a duplicate record for each note entered.  
+
+Here's an example of reading an EpiTrax report exported to a csv file. 
+```{r epitrax_data}
+  # construct the path and file name of the csv file to read
+  et_file <- file.path(paths$data, "EpiTrax_Epi Monthly Report_ET_06.04.25.csv")
+
+  # read the data and filter to just Cryptosporidiosis
+  et_data <- epitrax_import(.file = et_file) |> 
+    filter(patient_disease == "Cryptosporidiosis")
+  
+  # names of the first 12 variables in the data frame
+  names(et_data) |> head(12) 
+   
+  # tabulate confirmed and probable cases by MMWR Year
+  table(et_data$patient_mmwr_year, et_data$patient_lhd_case_status,
+        dnn = c("MMWR Year", "Cryptosporidiosis Case Status"))
+  
+  rm(et_file)
+```
+
+### b. NBS
+Similar to epitrax_import() is a function for reading a csv file containing a line list exported from NBS - **nbs_import()**.  It reads the "NBS line list with jurisdiction security" report exported as a csv file.  The returned data frame has Tarrant County cases only, Race and Ethnicity are coded as one variable, several variables with abbreviations are expanded to full values like "F" in sex is made "Female", and those variables that have "Yes/No/Unk" values are converted to  "TRUE/FALSE/NA" logical values. 
+
+The nbs_import() function is handy for importing and processing ad hoc NBS reports. Internally the function calls the [nbs_process()] function that handles recoding and standardizing the different columns.  nbs_process() is available if you use function like [read.csv()] to read an NBS report file and would like it formatted.
+
+### c. Combining data
+Often you will want to combine the data from NBS with the more recent data from EpiTrax. There are
+two different ways you can do this.  The first leverages the import functions for EpiTrax and NBS. However, the column names from each system differ and some variables are presented differently.  For example, a case name in NBS is given as "Last, First" names in one column.  Whereas in EpiTrax the name is split between two columns first and last.  This is where the [epitrax_2_nbs_format()] comes in.  It transforms the variables in a a data frame from epirax_import()
+to match the names and types in a data frame from  nbs_import().  For example:
+
+```{r combine_steps}
+  # path and file name to an NBS exported report.
+  nbs_file <- file.path(paths$communicable, "NBS/Jan_2008_to_Dec_2010.csv")
+  
+  # read the data
+  nbs_data <- nbs_import(nbs_file) |> 
+    filter(MMWR.Year == 2008,
+           Condition == "Cryptosporidiosis")
+  
+  # format the EpiTrax data to be the same as the NBS data
+  et_nbs_formatted <- epitrax_2_nbs_format(et_data)
+  
+  # combine NBS and EpiTrax data
+  all_cases <- bind_rows(et_nbs_formatted, nbs_data)
+  
+  # now look at the years and case totals for the combined data frame.
+  table(all_cases$MMWR.Year, all_cases$Case.Status, 
+        dnn = c("MMWR Year", "Cryptosporidiosis Case Status"))
+ 
+  rm(nbs_file, nbs_data, et_nbs_formatted)
+
+```
+
+
+The second and more concise method to combine NBS and EpiTrax data is to use the **[baseData()]** function. Some background regarding disease data. All historical line list disease data for Tarrant County (Confirmed and Probable cases) in NBS from 2005 through 2023 (and soon to include 2024) are in a file called "nbs_base.parquet". The case records in that file were previously imported and processed from downloaded NBS csv files. All of those csv files and the nbs_base.parquet file are in the folder at "G:/Data/Communicable Disease/NBS".
+
+The [baseData()] function reads all records in "nbs_base.parquet" and optionally combines an EpiTrax report csv file to it. If you want just the NBS data, then call ```baseData(.chooseNew = FALSE)```.  If you want to include EpiTrax data, change the function call to ```baseDate(.chooseNew = TRUE) ```, this causes a prompt for you to interactively choose the csv file with the exported EpiTrax data. When the EpiTrax report has been chosen, the function internally calls epitrax_import(), epitrax_2_nbs_format(), then row binds the NBS and EpiTrax data returning one combined data frame.  
+
+```{r nbs_data}
+   # Get only NBS Cryptosporidiosis cases from 2008 
+   nbs_cases <- baseData(.chooseNew = FALSE) |> 
+       filter(MMWR.Year == 2008, 
+              Condition == "Cryptosporidiosis")
+   table(nbs_cases$Case.Status, dnn = c("Case Status"))
+   rm(nbs_cases)
+```
+
+---
