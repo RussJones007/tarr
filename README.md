@@ -1,10 +1,8 @@
 # tarr
 
-`tarr` is an internal R package for Tarrant County public health and epidemiology workflows. It combines case-line-list import and harmonization, spatial clustering and mapping, epidemiology date utilities, text classification helpers, and a set of small analyst-oriented tools used in routine reporting.
+`tarr` is an internal R package for Tarrant County public health and epidemiology workflows. It combines case-line-list import and harmonization, spatial clustering and mapping, MMWR date utilities, text classification helpers, and a set of small analyst-oriented tools used in routine reporting.
 
 ## What The Package Covers
-
-The code in `R/` falls into a few main areas:
 
 ### Case Line List Import And Harmonization
 
@@ -20,10 +18,9 @@ The code in `R/` falls into a few main areas:
 -   `correct_city()` standardizes city names used in addresses and mapping workflows.
 -   `load_tarrant_spatial()` loads commonly used Tarrant County spatial layers.
 -   `scan_cluster()` applies density-based clustering to `sf` point data using `dbscan`, `hdbscan`, or `optics`.
--   `scanCluster()` remains as a backward-compatible wrapper around the newer clustering workflow.
 -   `mapCluster()`, `get_cluster_polys()`, and the `clustered` S3 methods support plotting and working with clustering results.
 -   `map_theme` provides a package-specific map theme for ggplot output.
--   `geo_sets` stores references to common Tarrant County spatial datasets.
+-   `geo_sets` stores the paths to common Tarrant County spatial datasets.
 
 ### Epidemiology Date Helpers
 
@@ -40,7 +37,9 @@ The code in `R/` falls into a few main areas:
 
 -   `read.clip()` and `write.clip()` move tabular data between R and the clipboard.
 -   `bar_wrap()` wraps another function with a progress bar for repeated calls.
--   String and normalization helpers such as `only_alpha()`, `only_digits()`, `only_pattern()`, `mash_name()`, `mash_phone()`, and `simplify_term()` support common data-cleaning tasks.
+-   String and normalization helpers such as `only_alpha()`, `only_digits()`, `only_pattern()`, `mash_name()`, and `mash_phone()`
+    for special text pricessing
+-   `simplify_term()` simplifies disease names for reporting.
 -   `epi_curve()` provides epidemic curve plotting for `incidence2` objects.
 
 ## Package Behavior
@@ -50,9 +49,7 @@ When the package attaches, it also attaches `rage` and `tarr.pop`. Several workf
 The package also includes path and file-selection infrastructure intended for the local reporting environment:
 
 -   `paths` contains named paths used by some workflows.
--   `tarr.filters` contains file filter definitions for interactive import routines.
-
-Those pieces are useful in the original working environment, but they may need adjustment if the package is used on another machine or filesystem layout.
+-   `tarr.filters` contains file filter definitions for use interactive import routines.
 
 ## Key Dependencies
 
