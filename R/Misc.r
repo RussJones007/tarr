@@ -65,6 +65,15 @@
 "simple_conditions"
 
 
+#' Map tiles
+#' 
+#' A named list of map tiles previously retrieved from Google Maps, and Stadia Maps. These map tiles are raater files
+#' that may be used in the background of plot or ggplot.  All of these mp tiles have a crs = epsg:3857 as that
+#' is wjat the map servers return.  Therefore points or polygons to place on the map should be be first transformed
+#' to the same rs.  
+#' 
+"base_maps"
+
 #' Encounters vector data frame
 #' 
 #' A data frame of case encounter descriptions from EpiTrax  Contains over 450 "encounters" aggregated form several epi

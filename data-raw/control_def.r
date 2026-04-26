@@ -84,7 +84,7 @@ rm(change_note, set_source_url)
 
 usethis::use_data(yearInfo, disease_map, field_names,city_names_spell, reportNames,
                   internal = TRUE, overwrite = TRUE)
-usethis::use_data(age.groups, city.names, city.names.outside, 
+usethis::use_data(age.groups, city.names, city.names.outside, base_maps,
                   simple_conditions, encounter_descriptions,
                   geo_sets, paths, synthetic_outbreak, tarr.filters, 
                   internal = FALSE, overwrite = TRUE)
