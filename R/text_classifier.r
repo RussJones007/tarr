@@ -259,12 +259,8 @@ normalize_pattern_names <- function(pats) {
 #' `classifier_patterns()` retrieves the pattern vectors captured inside a classifier created with `make_classifier()`.
 #' These are the base TRUE and FALSE regular-expression vectors that the classifier uses for text matching.
 #'
-#' If `effective = FALSE` (default), the function returns the base TRUE and FALSE pattern vectors exactly as stored in
-#' the classifier’s closure (with names preserved if the factory’s `sanitize_patterns()` preserved them).
-#'
-#' If `effective = TRUE`, the function returns the effective TRUE/FALSE pattern lists after merging the stored base
-#' patterns with any `extra_true` and `extra_false` patterns supplied to `classifier_patterns()`. The merge uses the
-#' same sanitization and name-normalization rules used internally by `make_classifier()`.
+#' The function returns the base TRUE and FALSE pattern vectors exactly as stored in the classifier's closure, with
+#' names preserved.
 #'
 #' The pattern lists may also be *modified* at runtime using the replacement function:
 #'
@@ -287,16 +283,9 @@ normalize_pattern_names <- function(pats) {
 #' @md
 #'
 #' @param f A classifier function returned by `make_classifier()`.
-#' @param effective Logical; if `TRUE`, return merged TRUE/FALSE patterns rather than the stored base patterns.
-#' @param extra_true,extra_false Optional character vectors of additional regex patterns to merge with the stored base
-#'   patterns when `effective = TRUE`.
 #'
 #' @return
-#' *If `effective = FALSE`:*
 #' `list(true = <character vector>, false = <character vector>)`
-#'
-#' *If `effective = TRUE`:*
-#' `list(merged_true = <character vector>, merged_false = <character vector>)`
 #'
 #' When used in replacement form, invisibly returns the modified classifier.
 #'
@@ -313,12 +302,6 @@ normalize_pattern_names <- function(pats) {
 #' # Retrieve base patterns
 #' classifier_patterns(clf)
 #'
-#' # Retrieve merged patterns
-#' classifier_patterns(clf, effective = TRUE)
-#'
-#' # Retrieve merged patterns including runtime extras
-#' classifier_patterns(clf, effective = TRUE, extra_true = c("followed up"))
-#'
 #' # Set both TRUE and FALSE patterns
 #' classifier_patterns(clf) <- list(
 #'   true_patterns  = c("yep", "sure"),
@@ -329,7 +312,7 @@ normalize_pattern_names <- function(pats) {
 #' classifier_patterns(clf) <- list(true = c("yes", "affirm"))
 #'
 #' @export
-classifier_patterns <- function(f, effective = FALSE, extra_true = NULL, extra_false = NULL) {
+classifier_patterns <- function(f) {
   stopifnot(is.function(f))
   
   env <- environment(f)
@@ -340,36 +323,9 @@ classifier_patterns <- function(f, effective = FALSE, extra_true = NULL, extra_f
     stop("Not a classifier created by make_classifier().")
   }
   
-  true_base  <- get("true",  envir = env, inherits = TRUE)
-  false_base <- get("false", envir = env, inherits = TRUE)
-  
-  if (!effective) {
-    # Just return the base lists
-    return(list(true = true_base, false = false_base))
-  }
-  
-  needed <- c("sanitize_patterns", "normalize_pattern_names")
-  missing <- needed[!vapply(needed, exists, logical(1), envir = env, inherits = TRUE)]
-  if (length(missing)) {
-    stop(
-      "Classifier closure is missing: ", paste(missing, collapse = ", "),
-      ". Ensure `f` was created by make_classifier()."
-    )
-  }
-  
-  sanitizer <- get("sanitize_patterns", envir = env, inherits = TRUE)
-  normalize_pattern_names <- get("normalize_pattern_names", envir = env, inherits = TRUE)
-  
-  extra_true  <- normalize_pattern_names(sanitizer(extra_true))
-  extra_false <- normalize_pattern_names(sanitizer(extra_false))
-  
-  # Merged lists (TRUE and FALSE each merged independently)
-  merged_true  <- normalize_pattern_names(sanitizer(c(true_base, extra_true)))
-  merged_false <- normalize_pattern_names(sanitizer(c(false_base, extra_false)))
-  
   list(
-    merged_true  = merged_true,
-    merged_false = merged_false
+    true = get("true", envir = env, inherits = TRUE),
+    false = get("false", envir = env, inherits = TRUE)
   )
 }
 
