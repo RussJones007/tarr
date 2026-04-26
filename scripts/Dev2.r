@@ -23,11 +23,8 @@ st_crs(border)
 #border <- st_transform(border, crs = 4326)
 #plot(st_geometry(border))
 
-
 ?scan_cluster
 ?mapCluster
-
-
 
 tarr_2 <- get_tiles(x = border, 
                     provider  = "Stadia.AlidadeSmooth",
@@ -45,36 +42,28 @@ plot(st_geometry(foo))
 plot(st_geometry(border), add = TRUE, col = NA)
 
 foo_dbscan <- scan_cluster(points = foo, method = "HDBSCAN", eps = 5280*1.25, minPts = 7)
-foo_dbscan <- scan_cluster(points = foo, eps = 5280*1.75, minPts = 4)
+#foo_dbscan <- scan_cluster(points = foo, eps = 5280*1.75, minPts = 4)
 foo_dbscan
 foo_dbscan |> print(n = 10)
 foo_dbscan |> attributes()
 so <- foo_dbscan |> scan_object() 
 class(so)
 so |> plot()
-dbscan:::print.hdbscan
-class(nx)
-(required_cols %in% names(x))
-
-names(x)
+#dbscan:::print.hdbscan
 class(foo_dbscan)
-class(x)
 tmp <- foo_dbscan[, c("race", "sex", "condition", "cluster", "point_type")]
 tmp |> class()
 tmp
-undebug(plot.clustered)
 plot(tmp)
 
 scan_object(foo_dbscan) |> class()
 scan_object(foo_dbscan) 
 scan_unit(foo_dbscan)
 
-
 # mapCluster is currently failing.
-ggmap::register_google(Sys.getenv("GOOGLE_MAPS_API"))
-bkgrd <- ggmap::get_map(location = "Tarrant County", source = "google")
-bkgrd_raster <- ggmap::ggmap(bkgrd) 
-mapCluster(.points = foo_dbscan, .cluster = cluster, .core = point_type, .cond = "Foo Flu", .bkgrnd = bkgrd_raster)
+
+debug(mapCluster)
+mapCluster(.points = foo_dbscan, .cluster = cluster, .core = point_type, .cond = "Foo Flu", .bkgrnd = ggmap(base_maps$google$bw$roadmap))
 
 #tmp <- plot(foo_dbscan, ratio = 1, background = "Esri.WorldStreetMap")+
 tmp <- plot(foo_dbscan, ratio = 1)+

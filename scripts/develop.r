@@ -1,3 +1,5 @@
+
+
 #library(perplexR)
 library(tidyverse)
 #library(maptiles)
@@ -18,11 +20,12 @@ convert_type()
 ?tarr.pop::population
 ?scan_cluster
 str_detect(NULL, "hi")
-
+paths
 ?case_interview_classifier
 ?make_classifier
 help(package = "tarr")
-
+load_all()
+tools::buildVignettes(dir = ".")
 # test case_interview_classifier
 # get notes to determoine if case or proxy was interviews
 encounters <- map(1:11, 
