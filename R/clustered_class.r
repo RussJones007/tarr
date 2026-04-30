@@ -193,7 +193,7 @@ print.clustered <- function(x, n = 7, ...) {
   # cluster_tab <- cluster_tab[names(cluster_tab) != "0"]
   
   cat("\n<clustered>")
-  writeLines(c(paste0(method_label, " clustering for ", nobs(so), " observations."),
+  writeLines(c(paste0(method_label, " clustering for ", n_obs, " observations."),
              paste0("Containing ", ncluster(so), " cluster(s) and ",  nnoise(so), " noise points."),
              cat("\n"))
   )
@@ -202,7 +202,7 @@ print.clustered <- function(x, n = 7, ...) {
 }
 
 #' @param object 
-#' @param background for clustered objects, you can prive a maptile as background. 
+#' @param background for clustered objects, you can provide a maptile or ggmap object as background. 
 #' @param ... 
 #'
 #' @return for clsutered object, a ggplot with the clustered points.
@@ -224,21 +224,27 @@ autoplot.clustered <- function(object, background = NULL, ...){
   hulls <- get_cluster_polys(points = object, cluster = cluster, ...)
   
   layers <- list()
-  if( !is.null(background)) {
+  
+  if( !is.null(background) & inherits(background, "ggmap")) background <- ggmap_2_spatraster(background)
+  
+  if( !is.null(background & inherits(background, "SpatRaster"))) {
     layers <- c(layers, list(tidyterra::geom_spatraster_rgb(data = background)))
   }
   
   layers <- c(layers, list(
+    geom_sf(data = hulls[-1, ], alpha = 0.25, aes(fill = cluster, color = cluster)),
     ggplot2::geom_sf(
-      mapping = aes(shape = ifelse(cluster == "0", "noise", "cluster")), 
-      size = 2.5), 
-    geom_sf(data = hulls[-1, ], alpha = .2)
+      data = object,
+      mapping = aes(shape = ifelse(cluster == "0", "noise", "cluster"),
+                    fill = cluster, color = cluster), 
+      size = 2.5) 
   ))
   
   # find specific arguments for ggplot that may have been passed
   args <- list(...)
-  pl <- ggplot(object, aes(fill = cluster, 
-                           color = cluster)) +
+
+
+  pl <- ggplot() +  
     layers +
     scale_shape_manual(values = c("noise" = 0, "cluster" = 19), ) +
     scale_size_manual(values = c("noise" = .25, "cluster" = 1)) +
@@ -258,6 +264,25 @@ autoplot.clustered <- function(object, background = NULL, ...){
   return(pl)
 }
 
+
+#' helper function to turn a ggmpa to a SpatRatser
+#' Usefule for autplot, ot other ggplot pipelines
+#' returns a SpatRaster object
+#' @param map A ggmap object form the ggmap package
+#' @keywords inteternal
+ggmap_2_spatraster <- function(map){
+  checkmate::assert_class(x = map, classes = c("ggmap", "raster"))
+  
+  bb <- attr(map, "bb")  
+  ext <- terra::ext(bb$ll.lon, bb$ur.lon, bb$ll.lat, bb$ur.lat)
+  
+  ret <- terra::as.raster(map) |> 
+    terra::as.array() |> 
+    terra::rast(extent = ext, crs= "EPSG:4326")
+  
+  ret
+
+}
 
 
 #' Credits for Clustered Object
@@ -542,3 +567,30 @@ select.clustered <- function(.data, ...){
   
   nx
 }
+
+
+
+# Missing functions from dbscan -----------------------------------------------------------------------------------
+
+#' Augment for the dbscan package optics class
+#'
+#' @param x An optics object returned from dbscan().
+#' @param data The data used to create the clustering.
+#' @param newdata New data to predict cluster labels for.
+#' @param ... 
+#'
+#' @returns A tibble with additional columns from the optics object
+#' @keywords internal
+augment.optics <- function(x, data = NULL, newdata = NULL, ... ){
+  new_cols <- as_tibble(x[c("order", "reachdist", "coredist","cluster")]) |> 
+    mutate(cluster = factor(cluster))
+    
+  ret <- bind_cols(data, new_cols) |> 
+    rename(.cluster = cluster) |> 
+    arrange(order)
+  ret
+}
+
+
+
+

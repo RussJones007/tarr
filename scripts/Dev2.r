@@ -7,6 +7,12 @@
 .libPaths()
 library(maptiles)
 
+ggmap::ggmap(base_maps$google$color$roadmap)+
+  labs(title = "roads")
+
+imap(base_maps$google$bw, ~ ggmap::ggmap(ggmap = .x) + labs(title = .y))
+
+
 frDate <- as.Date("2017-01-01")
 toDate <- as.Date("2019-12-31")
  mmwrWeek(seq(from=frDate,to=toDate,by="week")) 
@@ -31,18 +37,30 @@ tarr_2 <- get_tiles(x = border,
                     zoom = 11, 
                     crop = TRUE, 
                     apikey = Sys.getenv("STADIA"))
+ggplot()+
+  tidyterra::geom_spatraster_rgb(data = tarr_2)
 
 #tmap::tmap_provider_credits("Stadia.AlidadeSmooth")
 foo <- synthetic_outbreak[synthetic_outbreak$condition == "fooflu",] |> 
   st_as_sf(coords = c("lon", "lat")) 
-
+?st_transform
 glimpse(foo)
 st_crs(foo) <-  st_crs(border)
 plot(st_geometry(foo))
 plot(st_geometry(border), add = TRUE, col = NA)
 
 foo_dbscan <- scan_cluster(points = foo, method = "HDBSCAN", eps = 5280*1.25, minPts = 7)
-#foo_dbscan <- scan_cluster(points = foo, eps = 5280*1.75, minPts = 4)
+foo_optics <- scan_cluster(points = foo, method = "OPTICS", eps = 5280*2.25, minPts = 5)
+foo_optics
+
+autoplot(object = foo_dbscan, background = base_maps$stadia$stamen_toner_lite, ratio = .5)+
+  geom_sf(data = border, color = "navy", fill = NA, inherit.aes = FALSE)
+
+dbscan:::tidy.general_clustering(foo_optics)
+dbscan:::augment.general_clustering(foo_optics, foo)
+dbscan:::glance.general_clustering(foo_optics)
+
+foo_dbscan <- scan_cluster(points = foo, eps = 5280*1.75, minPts = 4)
 foo_dbscan
 foo_dbscan |> print(n = 10)
 foo_dbscan |> attributes()
@@ -101,6 +119,9 @@ foo_dbscan |> names()
 polys <- foo_dbscan |> 
   #filter(cluster == 2) |> 
   get_cluster_polys(cluster = cluster)
+
+
+
 
 polys |> View()
 plot(polys)

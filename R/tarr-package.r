@@ -26,7 +26,6 @@
 #' @import dbscan
 #' @import ivs
 #' @import rage
-#' @import maptiles
 #' @import vctrs
 #' @import ggplot2
 #' @importFrom stringi stri_detect_regex stri_match_first_regex
@@ -35,6 +34,7 @@
 #' tm_tiles tm_title tmap_save tmap_style tmap_mode tmap_leaflet tm_dots tm_rgb tm_scale_categorical
 #' tm_symbols tmap_providers tm_shape
 #' @importFrom tidyterra as_sf as_spatraster geom_spatraster geom_spatraster_contour  geom_spatraster_rgb
+#' @importFrom terra ext as.raster as.array rast
 #' @importFrom generics as.factor as.ordered
 #' @importFrom lazyeval uq uqf uqs
 #' @importFrom rlang enquo new_quosure eval_tidy syms quo_is_null as_name as_label is_empty is_list !!! list2

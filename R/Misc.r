@@ -65,24 +65,27 @@
 "simple_conditions"
 
 
-#' Map tiles
+#' Map Tiles For Static Maps
 #' 
-#' A named list of map tiles previously retrieved from Google Maps, and Stadia Maps. These map tiles are raater files
-#' that may be used in the background of plot or ggplot.  All of these mp tiles have a crs = epsg:3857 as that
-#' is wjat the map servers return.  Therefore points or polygons to place on the map should be be first transformed
-#' to the same rs.  
-#' 
+#' A named list of map tiles previously retrieved from Google , and StadiaMaps.The Google tiles are
+#' availabe in both color and black-and-white.   These map tiles are raster format that may be used in the background
+#' of plot or ggplot.  All of these tiles have a crs = epsg:3857 as that is what  the map servers return.  Therefore
+#' points or polygons to place on the map should be be first transformed to the same crs. 
+#' Each base map can be displayed using the plot() or ggmap::ggmap() functions.
+#' @examples
+#' Access the color roadmap tile
+#' `base_maps$google$color$roadmap`
 "base_maps"
 
 #' Encounters vector data frame
 #' 
-#' A data frame of case encounter descriptions from EpiTrax  Contains over 450 "encounters" aggregated form several epi
-#' investigators.  The data frame may be used in testing text classifiers, for example the [case_interview_classifier()]
-#' function is meant to find interviews done vs other actions shown in the note. The attempt_class field is a factor of
-#' attempts and interview by note as classified by manual review.  In addition to testing regular 
-#' expressions to classify the encounter notes, supervised machine models can be trained and then compared to the 
-#' test data set by using this data frame.   
-#' @format 
+#' A data frame of case encounter descriptions from EpiTrax  Contains over 450 "encounters" aggregated from notes of
+#' several epidemiology investigators.  The data frame may be used in testing text classifiers, for example the
+#' [case_interview_classifier()] function that is meant to find interviews done by looking at the encounter description 
+#' field. The attempt_class field is a factor of attempts and interview by note as classified by manual review.  In
+#' addition to testing regular expressions to classify the encounter notes, supervised machine models can be trained and
+#' then compared to the test data set by using this data frame.
+#' @format
 #' * Description holds the text entered into the encounter description field
 #' * attempt_class is a factor of interview status - Attempted (all attempts to interview the case), Interview 
 #' (actually interviewed) , Not an attempt (e.g. record review, calling IP or docotro, ROI, etc)

@@ -314,6 +314,9 @@ scan_cluster <- function(points,
                          crs = "epsg:2276", 
                          method = c("DBSCAN", "OPTICS", "HDBSCAN"), ...) {
   
+  dots <- list(...)
+  if("xi" %in% names(dots)) xi_arg = dots[["xi"]] %||% 0.07 else xi_arg = 0.07
+  
   checkmate::assert_class(points, "sf", .var.name = "points")
   
   checkmate::assert(
@@ -414,13 +417,18 @@ scan_cluster <- function(points,
                "DBSCAN"  = dbscan(point_matrix, eps = as.numeric(eps), minPts = minPts),
                "HDBSCAN" = hdbscan(point_matrix, minPts = minPts, ...),
                "OPTICS"  = {optics(point_matrix, eps = as.numeric(eps), minPts = minPts, ...) |> 
-                 extractXi(xi = 0.05)}
+                   dbscan::extractXi(xi = xi_arg)}
                )
   
-  ret <- augment(cl, points) |> 
-    rename(cluster = .cluster) |> 
-    mutate(point_type = ifelse(cluster == 0, "noise", "core"))
-  
+  #if(any(method  %in% c("DBSCAN", "HDBSCAN"))){
+    ret <- augment(cl, points) |> 
+      rename(cluster = .cluster) |> 
+      mutate(point_type = ifelse(cluster == 0, "noise", "core"))
+  #} else {
+  #  ret <- dbscan:::augment.general_clustering(cl, points) |> 
+  #    rename(cluster = .cluster)
+  #}
+    
   if( !inherits(ret, what = "sf")) class(ret) <- c("sf", class(ret))
   
   ret <- st_transform(ret, old_crs)
@@ -646,8 +654,8 @@ get_cluster_polys <- function(points, cluster, dist = 0, ...) {
 #' @return a POLYGON object
 get_poly <- function(points, dist = 0, ...) {
   args <- list(...)
-  
-  ratio = .70  # default
+  dots <- list(...)
+  if("ratio" %in% dots) ratio = dots[["ratio"]] else ratio = .50  # default
   if(length(args)){
     if("ratio" %in% names(args)) ratio <- args[["ratio"]]
     

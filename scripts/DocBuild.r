@@ -29,18 +29,19 @@ print("Installing package")
 # 
 usethis::use_version(which = "dev")
 
-2# Building documentation ------------------------------------------------------------------------------------------
+# Building documentation ------------------------------------------------------------------------------------------
 system.time(document()) # update the documentation
 #devtools::check()
 #devtools::build_vignettes()  # for use during development
 #devtools::install(build_vignettes = TRUE)
 detach(name = package:tarr, unload = TRUE)
 
+#build_vignettes()
 pkg <- pkgbuild::build(
   path = ".",
   vignettes = TRUE,
   manual = FALSE
-)
+  )
 
 install.packages(
   pkg,
@@ -50,7 +51,7 @@ install.packages(
 
 
 #pkgName <- build()
-#pkgName <- build(binary=TRUE, args = c('--preclean'))  # build a zip file of the package with binaries for installation
+pkgName <- pkgbuild::build(path = pkg, binary=TRUE)  # build a zip file of the package with binaries for installation
 #pkgName <- build(pkg = pkgName, binary=TRUE)  # build a zip file of the package with binaries for installation
 #print(paste(pkgName,"being installed"))
 # Install package -------------------------------------------------------------------------------------------------

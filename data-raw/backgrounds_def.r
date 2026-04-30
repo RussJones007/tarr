@@ -28,16 +28,19 @@ border         <- load_tarrant_spatial("tarrant_border")
 tarrant_box    <- sf::st_bbox(border) |> set_names(c("left", "bottom", "right", "top"))
 tarrant_center <- sf::st_centroid(border) |> st_geometry() |> unlist()
 
-# Retrieve Google background maps
 if (has_google_key()){
   
   # simplify call to
   retrieve_google <- partial(get_googlemap, 
                             center = tarrant_center, 
-                            zoom = 11,
+                            zoom = 10,
                             scale = 2) 
   
-  google_types <- c("terrain", "satellite", "roadmap", "hybrid")
+  google_types <- c(#"terrain", 
+                    "roadmap" #, 
+                    #"satellite",
+                    #"hybrid"
+                    )
   
   base_maps$google$color <- map(google_types, ~retrieve_google(maptype = .x, color = "color")) |> 
     set_names(google_types)
@@ -46,23 +49,35 @@ if (has_google_key()){
     set_names(google_types)
   
  rm(google_types, retrieve_google) 
+} else {
+  warning("A Google API key was not found, therefore the Google map tiles were not retrieved\n",
+          "You will need A Google account and an API key. \n",
+          "See the Details section of the ggmap::register_google() function on how to get a key")
 }
 
 
 if(has_stadiamaps_key()){
   
   retrieve_stadia <- partial(get_stadiamap, bbox = tarrant_box, zoom = 11)
-  stadia_types <- c("stamen_terrain", "stamen_toner_lite", "stamen_watercolor", 
-                    "stamen_terrain_background", "stamen_terrain_labels", 
-                    "stamen_toner_lines","stamen_toner_labels")
+  stadia_types <- c(#"stamen_terrain", 
+                    "stamen_toner_lite", 
+                    "stamen_watercolor", 
+                    "stamen_terrain_background", 
+                    "stamen_terrain_labels" #, 
+                    #"stamen_toner_lines",
+                    #"stamen_toner_labels"
+                    )
   
   base_maps$stadia <- map(stadia_types, ~ retrieve_stadia(maptype = .x, color = "color")) |> 
     set_names(stadia_types)
   
   rm(retrieve_stadia, stadia_types)
+} else {
+  warning("A Stadia Maps API key was not found, therefore the Stamen map tiles were not retrieved\n",
+          "Review the details section for the ggmap::register_stadiamaps() function on how to get a key\n" )
 }
 
 # Openstreet Map temporairy not supportd
 #base_maps$osm$color <- get_openstreetmap(bbox = tarrant_box, color = "color")
 
-usethis::use_data(base_maps)
+usethis::use_data(base_maps, internal = FALSE, overwrite = TRUE)

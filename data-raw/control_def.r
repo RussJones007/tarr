@@ -22,6 +22,7 @@ paths <- tarr:::paths_defined()
 
 load_all()
 
+sethis::use_data(paths, internal = FALSE, overwrite = TRUE)
 # --- Convenience function to set source and url attributes for data frames
 #' Set source attributes
 #'
@@ -41,7 +42,6 @@ set_source_url <- function(obj, nm, url) {
   )
   obj
 }
-
 
 # check files are in location expected relative to the package home directory
 fls <- c(
@@ -91,7 +91,4 @@ usethis::use_data(age.groups, city.names, city.names.outside, base_maps,
 
 rm(list = ls())
 
-# Due to conflicts with documenting the population data frame by running the script with the pther package scripts, the
-# R script with that documentation is run here.
-# devtools::document(pkg = "data-raw/pop_documentation")
 

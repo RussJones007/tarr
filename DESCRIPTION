@@ -44,7 +44,9 @@ Imports:
     rage,
     tarr.pop,
     checkmate,
-    stringi
+    stringi,
+    terra,
+    tidyterra
 Suggests:
     knitr,
     rmarkdown,
