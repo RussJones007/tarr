@@ -1,0 +1,577 @@
+---
+title: "Maps and Clusters"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Maps and Clusters}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 6,
+  out.width = "100%"
+)
+```
+
+## Overview
+
+This vignette introduces a practical mapping and clustering workflow using `tarr`, `sf`, and the density-based clustering methods available through `scan_cluster()`.
+
+The examples use the `synthetic_outbreak` data frame included with the `tarr` package. It  contains simulated cases of
+two fake conditions in Tarrant County. The same workflow can be adapted to a real line list that has one row per case
+and columns for longitude and latitude.
+
+By the end of this vignette, you should be able to:
+
+- load common Tarrant County spatial layers,
+- convert a line list into an `sf` POINT object,
+- plot case points on simple static maps,
+- use package-provided static base map tiles,
+- understand why coordinate reference systems matter,
+- choose a projected coordinate reference system for clustering,
+- run `scan_cluster()`, and
+- compare DBSCAN, HDBSCAN, and OPTICS results.
+
+This vignette assumes that you are fairly new to GIS work in R. The examples are intentionally verbose so that you can see each step.
+
+## Packages used
+
+```{r packages, message = FALSE, warning = FALSE}
+library(tarr)
+library(maptiles)
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(units)
+library(dbscan)
+```
+
+The most important package for GIS work is `sf`. An `sf` object is a data frame with a special geometry column. The
+regular columns contain attributes such as condition, sex, onset date, or case ID. The geometry column contains the
+spatial information, such as a point location or polygon boundary.
+
+## Tarrant County spatial layers
+
+The `tarr` package includes several commonly used Tarrant County spatial layers. The named list `geo_sets` stores the
+file paths for these layers. The helper function `load_tarrant_spatial()` loads one of these layers as an `sf` object.
+
+Common layers include:
+
+| Name | Description | Geometry |
+|:---|:---|:---|
+| `ZCTA` | ZIP Code Tabulation Areas | Polygon |
+| `tarrant_border` | Tarrant County boundary | Polygon |
+| `tarrant_tracts` | Census tracts in Tarrant County | Polygon |
+| `tarrant_blocks` | Census blocks in Tarrant County | Polygon |
+| `tarrant_cities` | Boundaries of cities that are partially or wholly in Tarrant County | Polygon |
+| `surrounding_borders` | Borders of counties surrounding Tarrant County | Polygon |
+| `isd` | Independent school districts | Polygon |
+
+You can see the available layer names with:
+
+```{r geo-set-names}
+names(geo_sets)
+```
+
+The usual way to load one layer is:
+
+```{r load-county}
+county <- load_tarrant_spatial("tarrant_border")
+
+county
+```
+
+The result is an `sf` object. You can check the geometry type and coordinate reference system:
+
+```{r inspect-county}
+sf::st_geometry_type(county)
+sf::st_crs(county)
+```
+
+The default coordinate reference system for these layers is EPSG:4326, which stores coordinates as longitude and latitude.
+You can also request a different coordinate reference system when loading a layer. This is useful when you want a layer to match another spatial object.
+
+```{r load-county-web}
+county_3857 <- load_tarrant_spatial("tarrant_border", .crs = 3857)
+
+sf::st_crs(county_3857)
+```
+
+## A first static map
+
+Before mapping cases, it helps to map the county boundary and nearby counties.
+
+```{r simple-boundary-map}
+surrounding <- load_tarrant_spatial("surrounding_borders")
+
+plot(st_geometry(surrounding), border = "grey60")
+plot(st_geometry(county), border = "red3", lwd = 2, add = TRUE)
+```
+
+This uses base R plotting. It is quick and useful for checking that a spatial layer loaded correctly.
+The same map can be made with `ggplot2`:
+
+```{r ggplot-boundary-map}
+ggplot() +
+  geom_sf(data = surrounding, fill = NA, color = "grey70") +
+  geom_sf(data = county, fill = NA, color = "red3", linewidth = 0.8) +
+  labs(title = "Tarrant County and surrounding counties") +
+  map_theme
+```
+
+The `map_theme` object is a ggplot2 theme provided by `tarr`. It removes axis labels and grid lines that are usually not helpful in 
+mapping local areas and sets font characterists. .
+
+## Making a POINT sf object from a line list
+
+A line list is usually stored as a data frame with one row per case and attributes for each case in columns
+(e.g., age, address, etc.). If the line list has coordinates like longitude/latitude columns, it can be converted into an `sf` POINT
+object.
+
+The package `synthetic_outbreak` data frame  has columns named `lon` and `lat`.
+
+```{r look-at-linelist}
+synthetic_outbreak |>
+  select(condition, onset, lon, lat) |>
+  head()
+```
+
+For this vignette, we will focus on the fake condition `fooflu`.
+
+```{r filter-fooflu}
+foo_cases <- synthetic_outbreak |>
+  filter(condition == "fooflu")
+
+nrow(foo_cases)
+```
+
+Now convert the ordinary data frame foo_cases into an `sf` object that will be called `foo`.
+
+```{r line-list-to-sf}
+foo <- foo_cases |>
+  st_as_sf(coords = c("lon", "lat"), crs = 4326)
+
+foo
+```
+
+The `coords` argument identifies the coordinate columns. Longitude is the x-coordinate and latitude is the y-coordinate,
+so the order is `c("lon", "lat")`.
+
+The `crs = 4326` argument tells `sf` that these coordinates are longitude and latitude coordinates. Coordinate systems
+can be expressed in decimal degrees, feet, yards, meters, etc.  Coordinate reference systems (CRS) give a model of how the 
+earth is modeled.  Some CRS project an area of the pearth as a plane, perhaps in meters or feet and can be valid over 
+one area om the earth. Other CRS can ue world coordinates such as decimal degrees often expressed as longitude/latitude
+or lon/lat.   Having a CRS set for an sf object is important. If it is an `sf` object does not have the correct CRS, GIS
+software including R cannot reliably transform it, measure distances, or overlay it with other layers.
+
+You can confirm that `foo` is now an `sf` POINT object and also see what the crs is for the object. The print out for 
+crs of foo is quite long.  Note how it states the ANGLEUNIT is "degree", the area it covers `World`.  A special value 
+at the bottom is `ID[ESPG, 4326]. All of the map tiles, and spatial data sets in this package use ESPG:4326.  This 
+the most commonly used refeence system when web mapping tools are used.
+
+```{r inspect-foo}
+sf::st_geometry_type(foo)
+sf::st_crs(foo)
+```
+
+## Plotting case points
+
+A quick base R plot is often the easiest first check.  Note the st_geomtery() function.  It pulls the geometry column from
+the sf object that is then used in the plot method.  In this example the st_geometry finction is used on the `county` polygon 
+in the first plot() call.  Then it used again in the second plot() call on the `foo` point object. Several other
+arguments are used in the plot() functions below such  `border = "navy"` sets the outside of the polygon to navy blue,
+and the `col = NA` means do not fill in the polygon.  Simmilary the `col = "red"` sets the points in the second plot()
+call to be red filled.  You can look at the resulting map and guess what `main = "Foo Cases` does in the map. 
+
+```{r base-point-map}
+plot(st_geometry(county), border = "navyblue", col = NA, main = "Foo Cases")
+plot(st_geometry(foo), col = "red3", pch = 16, add = TRUE)
+```
+
+A `ggplot2` map is usually better for reports and vignettes as it can be more readily customized.
+
+```{r ggplot-point-map}
+
+ggplot() +
+  geom_sf(data = county, fill = NA, color = "navyblue", linewidth = 0.8) +
+  geom_sf(data = foo, color = "red3", size = 1.5) +
+  labs(
+    title = "Fooflu case locations",
+    subtitle = "Synthetic outbreak data"
+  ) +
+  map_theme
+```
+
+You can add more base layers for context. Here, city boundaries are added behind the points.
+
+```{r city-context-map}
+cities <- load_tarrant_spatial("tarrant_cities")
+
+ggplot() +
+  geom_sf(data = cities, fill = NA, color = "grey70", linewidth = 0.3) +
+  geom_sf(data = county, fill = NA, color = "black", linewidth = 0.8) +
+  geom_sf(data = foo, color = "red3", size = 1.5) +
+  labs(
+    title = "Fooflu case locations with city boundaries",
+    subtitle = "Synthetic outbreak data"
+  ) +
+  map_theme
+```
+
+## Static base map tiles
+
+The `base_maps` object contains static map tiles that were previously retrieved from Google and Stadia Maps. These tiles can be used as a background for static maps. They are useful when you want more geographic context than boundary polygons alone can provide.
+
+For example, one available tile is `base_maps$stadia$stamen_toner_lite'.  
+
+```{r base-map-object}
+  plot(base_maps$stadia$stamen_toner_lite, main = "Stamen Toner Lite Map Tile")
+```
+
+
+The map tile can be drawn with the ggmap() function from the ggmap package.Then the `sf` layers are added on top.
+
+```{r static-basemap-map, message = FALSE, warning = FALSE}
+
+ggmap::ggmap(base_maps$stadia$stamen_toner_lite) +
+  geom_sf(data = county, fill = NA, color = "navy", linewidth = 0.8, inherit.aes = FALSE) +
+  geom_sf(data = foo, color = "red3", size = 1.4, inherit.aes = FALSE) +
+  labs(
+    title = "Fooflu case locations",
+    subtitle = "Static Stadia/Stamen toner lite base map"
+  ) +
+  map_theme
+
+```
+
+If your points do not appear where expected, check the CRS first. A common mistake is to plot longitude/latitude points directly on a base map without transforming them.  All layers should be using the same CRS.  
+
+## Coordinate reference systems
+
+A coordinate reference system, or CRS, tells R how coordinates relate to places on Earth.
+
+There are two broad CRS types that matter for this vignette:
+
+1. Geographic CRS  
+   Coordinates are stored as longitude and latitude. EPSG:4326 is a common example. This is convenient for storage, sharing, and many web mapping tasks.
+
+2. Projected CRS  
+   Coordinates are stored on a flat projected surface. Units are usually feet or meters. Projected coordinate systems are usually better for distance calculations.
+
+You can check whether an object is longitude/latitude with:
+
+```{r is-longlat}
+st_is_longlat(foo)
+```
+
+Because `foo` is in EPSG:4326, its coordinates are degrees. Degrees are not a good unit for density-based clustering. A difference of one degree of longitude is not the same physical distance everywhere on Earth.
+
+The `scan_cluster()` function performs distance-based clustering. For that reason, it needs a projected CRS for clustering. Its default clustering CRS is `"epsg:2276"`, which is appropriate for North Central Texas and uses feet. This makes values like `5280` meaningful as about one mile.
+
+```{r projected-example}
+foo_2276 <- st_transform(foo, "epsg:2276")
+
+st_crs(foo_2276)
+st_is_longlat(foo_2276)
+```
+
+For work in Tarrant County, the scan_cluster() default `crs = "epsg:2276"` is usually a good choice. For work somewhere else, choose a local projected CRS or an appropriate UTM CRS for the study area.
+
+## Running scan_cluster()
+
+The `scan_cluster()` function identifies clusters in an `sf` POINT object using one of three density-based methods:
+
+- DBSCAN,
+- HDBSCAN, or
+- OPTICS.
+
+The input must be an `sf` object with POINT geometry and a valid CRS.
+
+Here is a first HDBSCAN example:
+
+```{r hdbscan-example}
+foo_hdbscan <- scan_cluster(
+  points = foo,
+  method = "HDBSCAN",
+  minPts = 7,
+  crs = "epsg:2276"  # this is the same as the default
+)
+
+foo_hdbscan
+```
+
+The returned object is a `clustered` object. It is still an `sf` object, but it has additional clustering information.
+
+The main added column is `cluster`.
+
+```{r cluster-column}
+# First few rows of cases, note the cluster column
+foo_hdbscan
+
+# Show the clusters and the number of cases in each
+foo_hdbscan$cluster |> 
+  table()
+```
+
+Cluster `0` means noise. Noise points are points that were not assigned to a cluster. Positive cluster numbers are detected clusters.
+
+The returned object also stores the original clustering result from the `hdbscan` function. Use `scan_object()` to retrieve it.
+
+```{r scan-object}
+hdbscan_object <- scan_object(foo_hdbscan)
+
+hdbscan_object
+```
+
+Use `scan_unit()` to see the distance unit used for the clustering algorithm.
+
+```{r scan-unit}
+scan_unit(foo_hdbscan)
+```
+
+## Plotting clustered objects
+
+A `clustered` object has a plot method. The default is to return an interactive plot.
+
+```{r plot-clustered}
+plot(foo_hdbscan)
+```
+
+For a static report-style map, you can use `autoplot()`.
+
+```{r autoplot-clustered}
+autoplot(foo_hdbscan, title = "Fooflu clusters identified with HDBSCAN", background = base_maps$stadia$stamen_toner_lite)
+```
+
+The `autoplot()` method also creates polygons around clusters using `get_cluster_polys()`. These polygons are helpful for visual interpretation, but they should not be interpreted as exact exposure areas.
+
+You can create those polygons directly:
+
+```{r cluster-polys}
+foo_polys <- get_cluster_polys(foo_hdbscan, cluster = cluster, ratio = 0.7)
+
+foo_polys
+```
+
+Then map the points and polygons together.
+
+```{r cluster-poly-map}
+ggplot() +
+  geom_sf(data = county, fill = NA, color = "grey50") +
+  geom_sf(data = foo_polys, aes(fill = factor(cluster)), alpha = 0.25) +
+  geom_sf(data = foo_hdbscan, aes(color = factor(cluster)), size = 1.5) +
+  labs(
+    title = "Fooflu HDBSCAN clusters",
+    fill = "Cluster",
+    color = "Cluster"
+  ) +
+  map_theme
+```
+
+## Clustered maps with static base map tiles
+
+If you want the clustered map on top of a static map tile
+Use the `background` argument in `autoplot()`.
+
+```{r clustered-basemap-map, message = FALSE, warning = FALSE}
+
+
+print("TO DO")
+
+#autoplot(
+#  foo_hdbscan,
+#  background = base_maps$stadia$stamen_toner_lite,
+#  title = "Fooflu HDBSCAN clusters",
+#  subtitle = "Static base map with clustered points"
+#)
+```
+
+## Comparing DBSCAN, HDBSCAN, and OPTICS
+
+The three methods available through `scan_cluster()` are related, but they answer slightly different questions.
+
+| Method | Uses `eps`? | Good for | Practical note |
+|:---|:---:|:---|:---|
+| DBSCAN | Yes | A simple first pass when clusters are expected to have similar density | Results can change substantially when `eps` changes |
+| HDBSCAN | Not in the basic call | Clusters with varying density | Often a useful default when you do not know one good distance threshold |
+| OPTICS | Yes | Exploring clustering structure across distances | In `scan_cluster()`, OPTICS is followed by `extractXi()` to assign clusters |
+
+The two most important parameters are:
+
+- `minPts`: the minimum number of nearby points needed to form a dense area.
+- `eps`: the search distance used by DBSCAN and OPTICS.
+
+For DBSCAN, `eps` is especially important. In the example below, `eps` is set to 1.25 miles. Because the clustering CRS is EPSG:2276, the function converts that value to the CRS unit.
+
+```{r run-dbscan}
+foo_dbscan <- scan_cluster(
+  points = foo,
+  method = "DBSCAN",
+  minPts = 7,
+  eps = units::set_units(5280 * 1.25, feet),
+  crs = "epsg:2276"
+)
+
+foo_dbscan
+```
+
+HDBSCAN does not require the same single distance threshold in the basic call.
+
+```{r run-hdbscan}
+foo_hdbscan <- scan_cluster(
+  points = foo,
+  method = "HDBSCAN",
+  minPts = 7,
+  crs = "epsg:2276"
+)
+
+foo_hdbscan
+```
+
+OPTICS uses `eps` as a maximum search distance. In `scan_cluster()`, the OPTICS result is passed through `extractXi()` to create cluster assignments.
+
+```{r run-optics}
+foo_optics <- scan_cluster(
+  points = foo,
+  method = "OPTICS",
+  minPts = 4,
+  eps = units::set_units(5280 * 2.55, feet),
+  crs = "epsg:2276"
+)
+
+foo_optics
+```
+
+The summaries can be compared by counting points in each cluster.
+
+```{r compare-cluster-counts}
+bind_rows(
+  foo_dbscan |>
+    st_drop_geometry() |>
+    count(cluster, name = "n") |>
+    mutate(method = "DBSCAN"),
+  foo_hdbscan |>
+    st_drop_geometry() |>
+    count(cluster, name = "n") |>
+    mutate(method = "HDBSCAN"),
+  foo_optics |>
+    st_drop_geometry() |>
+    count(cluster, name = "n") |>
+    mutate(method = "OPTICS")
+) |>
+  select(method, cluster, n) |>
+  arrange(method, cluster)
+```
+
+And the maps can be compared visually.
+
+```{r plot-dbscan}
+print("TO DO")
+
+#autoplot(foo_dbscan, title = "DBSCAN")
+```
+
+```{r plot-hdbscan}
+# autoplot(foo_hdbscan, title = "HDBSCAN")
+```
+
+```{r plot-optics}
+#autoplot(foo_optics, title = "OPTICS")
+```
+
+The methods may identify different clusters because they define density differently. This is expected. Cluster detection is exploratory and should be interpreted with local epidemiologic knowledge.
+
+## Choosing parameters
+
+There is no single correct value for `minPts` or `eps`.
+
+A practical starting approach is:
+
+1. Choose a projected CRS that is appropriate for the study area.
+2. Choose a distance that has a real-world interpretation.
+3. Choose a minimum point count that reflects the size of cluster you care about.
+4. Run the clustering method.
+5. Map the results.
+6. Repeat with other plausible values and compare.
+
+For example, in Tarrant County with `crs = "epsg:2276"`:
+
+```{r compare-eps, eval = FALSE}
+scan_cluster(
+  points = foo,
+  method = "DBSCAN",
+  minPts = 7,
+  eps = units::set_units(0.5, mile),
+  crs = "epsg:2276"
+)
+
+scan_cluster(
+  points = foo,
+  method = "DBSCAN",
+  minPts = 7,
+  eps = units::set_units(1, mile),
+  crs = "epsg:2276"
+)
+
+scan_cluster(
+  points = foo,
+  method = "DBSCAN",
+  minPts = 7,
+  eps = units::set_units(2, mile),
+  crs = "epsg:2276"
+)
+```
+
+Small `eps` values tend to find only compact clusters. Large `eps` values may merge nearby groups into larger clusters.
+
+## Important cautions
+
+Spatial clusters are exploratory. They do not prove transmission, exposure, or a shared source. A cluster can appear because of population density, geocoding quality, testing patterns, reporting practices, or the selected clustering parameters.
+
+Always consider:
+
+- whether the cases are geocoded accurately,
+- whether duplicate addresses or institutional addresses are present,
+- whether the CRS is appropriate,
+- whether the selected distance threshold makes sense,
+- whether population distribution should be considered, and
+- whether the result matches field investigation knowledge.
+
+## Complete example
+
+This is a compact version of the workflow.
+
+```{r complete-example, eval = FALSE}
+library(tarr)
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(units)
+
+county <- load_tarrant_spatial("tarrant_border")
+
+foo <- synthetic_outbreak |>
+  filter(condition == "fooflu") |>
+  st_as_sf(coords = c("lon", "lat"), crs = 4326)
+
+foo_clusters <- scan_cluster(
+  points = foo,
+  method = "HDBSCAN",
+  minPts = 7,
+  crs = "epsg:2276"
+)
+
+#autoplot(foo_clusters, title = "Fooflu HDBSCAN clusters")
+```
+
+For a static base map tile:
+
+```{r complete-basemap-example, eval = FALSE}
+
+plot(foo_clusters)
+
+```

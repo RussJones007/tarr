@@ -17,7 +17,8 @@ knitr::opts_chunk$set(
 
 ## GIS & clustering
 For spatial analysis, several base layers and functions are provided for mapping and clustering detection. The R package
-"sf" is used in most spatial transformations and analysis.  Geocoded data can be mapped both statically and interactively.
+"sf" is used in most spatial transformations and analysis.  Geo coded data can be mapped both statically and
+interactively.
 
 The named list variable `geo_sets` stores paths to often used base layers. For example `geo_sets$isd` returns the path to
 a layer of independent school districts. The next table shows the name and the layer available, all of which are polygons
@@ -34,9 +35,10 @@ stored as "sf" objects and have a coordinate reference system set `epsg:4326`
 |isd              |Independent School Districts                |
 
 Each of the layers can be loaded using `load_tarrant_spatial()` or `readRDS()`.  The load_tarrant_spatial(.name, .crs)
-just takes one of the names in the table above and by default returns the layer by default with a Coordinate Reference
-System (CRS) of '4326'. You can also use the base R function readRDS() and give it the path to the layer using the
-geo_sets list varibale.  Here is how each method can be used to load a layer.
+takes one of the names in the table above and by default returns the layer with a Coordinate Reference
+System (CRS) of '4326'. The `crs` can be used to have the spatial layer in a different coordinate reference system. You
+can also use the base R function readRDS() and give it the path to the layer using the geo_sets list varibale.  Here is
+how each method can be used to load a layer.
 
 ```{r reading_layers, eval=TRUE}
 library(tarr,  quietly = TRUE)
@@ -54,9 +56,43 @@ rm(cities, other_counties, tarr_border)
 
 ```
 
-Density based algorithms are provided for identifying possible clusters.  
+## Mapping cases
 
-**Key functions**: `scan_cluster()` (DBSCAN/OPTICS/HDBSCAN), `autoplot.clustered()`, `plot.clustered()`, `scan_object()`, `get_unit()`, `load_tarrant_spatial()`, `map_theme`.
+Line lists of cases with latititude and longitude data can be mapped.  Importantly, case lists from EpiTtax can include the lat/lon the residence of each case. For example, usng the package provided synthtic_outbreak data frame, make it a 
+simple fetures (sf) POINTS object that can be mapped using  the  `st_as_sf()` function.  
+
+Several base map tiles from Google maps and Stadiamaps are also available in the package.  These can be used for background to give points context in a non-interactive map.  The tiles are stored in a list called base_map[.]
+
+```{r cases_to_sf}
+
+# get theTarrant County outline
+county  <- load_tarrant_spatial("tarrant_border")
+
+# Select the fooflu cases and make it an sf POINTS object
+foo <- synthetic_outbreak[synthetic_outbreak$condition == "fooflu",] |> 
+  st_as_sf(coords = c("lon", "lat")) 
+  
+# foo needs a crs, assign it from the county sf object
+st_crs(foo) = st_crs(county)
+  
+# plot the "cases"  and county outline
+plot(st_geometry(foo), col = "red3")
+plot(st_geometry(county), add = TRUE, border = "navyblue", col = NA)
+
+```
+A static map 
+
+## Density based algorithms are provided for identifying possiblespatial  clusters.  
+
+```{r clusters, fig.width = 8, fig.height = 6}
+foo_scan <- scan_cluster(points = foo, method = "HDBSCAN", eps = 5280*1.25, minPts = 7)
+foo_scan
+
+# show the cases and clusters
+plot(foo_scan)
+```
+
+
 
 ```r
 # Optional basemap layers
