@@ -487,7 +487,9 @@ internalChooseCSV <- function(caption = "Choose CSV file data to open or press \
 
 #' Convert vector to compatible type
 #'
-#'  Simple function that converts the type of vec1 to that of vec2
+#'  Simple function that converts the type of vec1 to that of vec2.  Can handle most base types including
+#'  factors and ordered factor.  Note that for ordered factors it is an error if vec1 has values that 
+#'  are not in vec2.
 #'
 #' @param vec1 The vector to convert 
 #' @param vec2 The template vector
@@ -511,6 +513,22 @@ internalChooseCSV <- function(caption = "Choose CSV file data to open or press \
 #' class(v3)
 #' 
 convert_type <- function(vec1, vec2){
+
+    # converts a vector to an ordered vector 
+  as.ordered_convert <- function(vec, template = vec2){
+    orig_levels <- unique(vec)
+    template_levels <- levels(template)
+    delta <- setdiff(orig_levels, template_levels)
+    if(length(delta)) {
+      parent_name <- as.character(sys.call(-1)[[1]])
+      cli::cli_abort(message = c("Error in {parent_name}(vec1, vec2) converting to ordered factor",
+                                 i = "{length(delta)} values in vec1 are not present in vec2",
+                                 x = "{head(delta, 7)}")
+      )
+    }
+    ordered(vec, levels = levels(template))
+  }
+  
   funcs <- list(
     "integer"         = as.integer,
     "numeric"         = as.numeric,
@@ -518,10 +536,12 @@ convert_type <- function(vec1, vec2){
     "POSIXct"         = as.POSIXct,
     "character"       = as.character,
     "logical"         = as.logical,
-    "factor"          = as.factor)
-
+    "factor"          = as.factor,
+    "ordered"         = as.ordered_convert)
+  
   sel <- class(vec2)[1]  # class of date time is "POSIXct and POSIXlt", use the the first one "POSIXct"
   funcs[[sel]](vec1)
+  #ret <- if(sel == "ordered") as.ordered_convert(vec1, vec2) else funcs[[sel]](vec1)
 }
 
 
