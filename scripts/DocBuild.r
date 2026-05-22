@@ -43,15 +43,16 @@ pkg <- pkgbuild::build(
   manual = FALSE
   )
 
+pkgname <- pkgbuild::build(path = pkg, binary=TRUE)  # build a zip file of the package with binaries for installation
+
 install.packages(
-  pkg,
+  pkgname,
   repos = NULL,
   type = "source"
 )
 
 
 #pkgName <- build()
-pkgName <- pkgbuild::build(path = pkg, binary=TRUE)  # build a zip file of the package with binaries for installation
 #pkgName <- build(pkg = pkgName, binary=TRUE)  # build a zip file of the package with binaries for installation
 #print(paste(pkgName,"being installed"))
 # Install package -------------------------------------------------------------------------------------------------
