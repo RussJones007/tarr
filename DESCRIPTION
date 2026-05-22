@@ -1,7 +1,7 @@
 Package: tarr
 Type: Package
 Title: Tarrant County Epidemiology Division functions
-Version: 0.0.0.9261
+Version: 0.0.0.9262
 Authors@R: c(person("Russ", "Jones", role = c("aut", "cre"),
   email = "RussJones007@yahoo.com"))
 Maintainer: Russ Jones <RussJones007@yahoo.com>
