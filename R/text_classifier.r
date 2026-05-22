@@ -23,6 +23,8 @@
 #'
 #' @param true_patterns,false_patterns Character vectors of regular expressions.
 #' @param ignore_case Logical, default `TRUE`. Set to `FALSE` to create a case-sensitive classifier.
+#' @param bias determines which pattern to use when both patterns are positive.  Defaults to the
+#' true_pattern
 #'
 #' @return A function with signature:
 #' \preformatted{
@@ -38,6 +40,10 @@
 #' If `TRUE`, returns a data frame containing the input text, the logical classification, and the first TRUE or FALSE
 #' pattern that matched.
 #'   * `extra_true`, `extra_false`: optional character vectors of additional regex patterns to augment the default lists.
+#'   * `bias`  determine what result should be used when the true_pattern and the false_pattern both match.  THe default
+#'   is to use the true _pattern result.
+#'   * `default_class` is what the classification should be is nother pattern types match.  The defualt is NA, but can 
+#'   set to TRUE or FALSE.
 #'
 #' @seealso
 #'   * [classifier_patterns()] to retrieve the TRUE and FALSE pattern lists used by a classifier created with 
@@ -119,8 +125,20 @@ make_classifier <- function(true_patterns, false_patterns, ignore_case = TRUE) {
   }
   
   # Return the classifier function that closes over precompiled patterns
-  function(x, return_detail = FALSE, extra_true = NULL, extra_false = NULL) {
+  function(x, return_detail = FALSE, 
+           extra_true       = NULL, 
+           extra_false      = NULL, 
+           bias             = c("true_pattern", "false_pattern"),
+           default_class    = c("NA", "TRUE", "FALSE")) {
     stopifnot(is.character(x))
+    
+    bias          <- match.arg(arg = bias, choices = c("true_pattern", "false_pattern"))
+    default_class <- match.arg(arg = default_class)
+    default_class <- switch(default_class,
+                            "NA"    = NA,
+                            "TRUE"  = TRUE,
+                            "FALSE" = FALSE)
+    
     
     # Allow runtime extras; sanitize them
     extra_true  <- normalize_pattern_names(sanitize_patterns(extra_true))
@@ -154,9 +172,10 @@ make_classifier <- function(true_patterns, false_patterns, ignore_case = TRUE) {
     } else rep_len(FALSE, length(x))
     
     # Final classification
-    status <- rep_len(NA, length(x))
+    status <- rep_len(default_class, length(x))
     status[has_true & !has_false] <- TRUE
     status[!has_true & has_false] <- FALSE
+    status[has_true & has_false]  <- if(bias == "true_pattern") TRUE else FALSE
     
     # Fast path
     if (!return_detail) return(status)
@@ -413,7 +432,7 @@ interview_false <- list(
   nedss      = r"(\b(?:NEDSS|NBS|External\s+source)\b)",
   
   # records requested
-  request    = r"(\brecords (?:request|sent)?\b)",
+  request    = "(\\brecords (request(ed)?|sent)\\b) | (\\brequest(ed)? records\\b)",
   
   # medical staff references
   medical    = r"(\b(talked|spoke)\s+(?:with\s)?(infection preventionist|ip|nurse|dr|doctor))",
@@ -425,7 +444,7 @@ interview_false <- list(
   fax_lab    = r"(\b(?:fax(?:ed|ing)?|labs?|roi|sent\s+to)\b)",
   
   # record/chart reviews
-  records    = r"(\b(?:record\s+review(?:\s+only)?|(?:reviewed\s+records)?|abstract(?:ed|ing|ion)?|chart\b))",
+  records    = r"(\b(?:record\s+review(?:\s+only)?|reviewed\s+records|abstract(?:ed|ing|ion)?|chart\b))",
   
   # mail
   letter     = r"(\bform\s+letter\b)",
