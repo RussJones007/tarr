@@ -19,10 +19,10 @@ rm(list = ls())
 # source( "R/Paths.r")
 # paths <- tarr::paths_defined()
 paths <- tarr:::paths_defined()
+usethis::use_data(paths, internal = FALSE, overwrite = TRUE)
 
 load_all()
 
-sethis::use_data(paths, internal = FALSE, overwrite = TRUE)
 # --- Convenience function to set source and url attributes for data frames
 #' Set source attributes
 #'
