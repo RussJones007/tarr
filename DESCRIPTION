@@ -6,8 +6,7 @@ Authors@R: c(person("Russ", "Jones", role = c("aut", "cre"),
   email = "RussJones007@yahoo.com"))
 Maintainer: Russ Jones <RussJones007@yahoo.com>
 Description: Several functions used by the Epidemiology Division to identify
-  clusters, load map layers, importing data from EpiTrax and NBS. 
-  Auto loads the tarr.pop and rage packages
+  clusters, load map layers, importing data from EpiTrax and NBS.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -42,7 +41,6 @@ Imports:
     generics,
     base,
     rage,
-    tarr.pop,
     checkmate,
     stringi,
     terra,
@@ -50,7 +48,8 @@ Imports:
 Suggests:
     knitr,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    tarr.pop
 RoxygenNote: 7.3.3
 Config/testthat/edition: 3
 VignetteBuilder: knitr

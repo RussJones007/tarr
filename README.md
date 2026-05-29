@@ -44,7 +44,7 @@
 
 ## Package Behavior
 
-When the package attaches, it also attaches `rage` and `tarr.pop`. Several workflows depend on those packages for age calculation and population data.
+The package no longer attaches companion packages on startup. Load `rage` or `tarr.pop` directly when you need their age-group or population workflows.
 
 The package also includes path and file-selection infrastructure intended for the local reporting environment:
 
@@ -130,7 +130,6 @@ The package includes several supporting objects used by epidemiologists and by t
 ## Development Notes
 
 -   Tests are under `tests/testthat/`.
--   The package startup message indicates that the `tarr` ecosystem attaches `rage` and `tarr.pop`.
 -   Some workflows assume access to local or shared-drive data resources that are not bundled in the package repository.
 
 ## Repository

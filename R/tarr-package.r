@@ -5,8 +5,7 @@
 #'  converting EpiTrax dataframes to NBS compatible data frames so the two may be combined. Provides data sets for all
 #'  confirmed and probable diseases for Tarrant County since 2005. Provides several spatial data sets in the [geo_sets]
 #'  list. GIS functions include [correct_city()], scanning for clusters [scan_cluster()], and creating a map of the
-#'  clusters.  Population figures for Texas and counties are made available by the tarr.pop package that is loaded when
-#'  this package is started.
+#'  clusters. Population workflows require users to load the `tarr.pop` package separately.
 #'
 #' @author Russ Jones <RussJones007@gmail.com>
 #' @keywords package
@@ -25,7 +24,6 @@
 #' @import checkmate
 #' @import dbscan
 #' @import ivs
-#' @import rage
 #' @import vctrs
 #' @import ggplot2
 #' @importFrom stringi stri_detect_regex stri_match_first_regex

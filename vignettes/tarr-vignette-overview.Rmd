@@ -57,9 +57,9 @@ used.
 **Map & cluster** describes the geographic layers provided, functions
 that aid mapping, and spatial cluster detection.
 
-**Population** lists the population data sets included in the tarr.pop
-package and functions provided to retrieve and manipulate population
-figures.
+**Population** workflows use the tarr.pop package. Load `tarr.pop`
+separately when you need its population data sets or population helper
+functions.
 
 ## Installation & project setup
 
@@ -71,9 +71,9 @@ Several other packages are needed for tarr to operate properly. Since
 the package is not hosted on CRAN, dependencies are not automatically
 installed. Source the `tarr_depend.r` file in RStudio. This will install
 most, if not all, of the R packages needed for the tarr package to
-properly function. In addition it also installs tarr.pop for population
-figures and tarr.brand that makes Tarrant County branding colors and
-items available.
+properly function. Install and load tarr.pop separately for population
+figures, and tarr.brand separately for Tarrant County branding colors
+and items.
 
 #### Note
 
