@@ -280,11 +280,11 @@ nbs_import <- function(.file = NULL, .include.all = FALSE, .use_cache = TRUE) {
   } else {
 
   # ---- Check if this CSV file has already been processed and load if .include.all is FALSE
-  fname <- gsub(pattern=".csv",replacement = ".parquet",fn,ignore.case = T)
+  fname <- sub(pattern = "\\.csv$", replacement = ".parquet", fn, ignore.case = TRUE)
   if(file.exists(fname) & .include.all == FALSE & .use_cache == TRUE){
-    if(tools::file_ext(fname) == "csv") load(fname) else dis <- nanoparquet::read_parquet(fname)
     interactive_msg(paste0("The NBS report file: ",basename(fname),
                 " was previously processed. Cached data file has been loaded"))
+    return(nanoparquet::read_parquet(fname))
   } else {  # not previously processed, read in csv file.
     stopifnot(!is.null(fn) & file.exists(fn))
     nbs <- read.csv(file = fn, header = TRUE, as.is = TRUE, stringsAsFactors = FALSE)
@@ -296,8 +296,9 @@ nbs_import <- function(.file = NULL, .include.all = FALSE, .use_cache = TRUE) {
     }
   }
 
-  #Save the processed nbs file to a parquet file 
-  write_parquet(dis, file = fname)
+  # Cache only the default confirmed/probable result. An all-status import
+  # must not overwrite the cache used by default calls.
+  if(!.include.all) write_parquet(dis, file = fname)
   #save(dis, file=fname)
   return(dis)
 }
