@@ -1,8 +1,8 @@
 #' tarr
 #'
-#'  Functions and data sets for use by Tarrant County Public Health epidemiolog staff. Provides functions for
+#'  Functions and data sets for use by Tarrant County Public Health epidemiology staff. Provides functions for
 #'  calculating MMWR weeks, writing to and from the clipboard, processing NEDSS and EpiTrax exported files and
-#'  converting EpiTrax dataframes to NBS compatible data frames so the two may be combined. Provides data sets for all
+#'  converting EpiTrax data frames to NBS compatible data frames so the two may be combined. Provides data sets for all
 #'  confirmed and probable diseases for Tarrant County since 2005. Provides several spatial data sets in the [geo_sets]
 #'  list. GIS functions include [correct_city()], scanning for clusters [scan_cluster()], and creating a map of the
 #'  clusters. Population workflows require users to load the `tarr.pop` package separately.
