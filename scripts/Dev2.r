@@ -1,3 +1,16 @@
+
+
+test1 <- c("no", NA, NA, "No")
+#debug(is_yn)
+is_yn(test1)
+
+vec_values[1] |> length()
+vec_case_func[[3]] <- stringr::str_to_title
+vec_case_func[[3]](vec_values[1])
+stringr::str_to_title(vec_values[1])
+
+identical(vec_values[1], f(vec_values[1]))
+
 geo_sets$surrounding_borders
 
 ?case_interview_classifier
