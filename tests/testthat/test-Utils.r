@@ -54,3 +54,28 @@ test_that("is_yn rejects non-yes/no vectors", {
   expect_false(is_yn(c("yes", "maybe")))
 })
 
+test_that("yn_2_logical converts normalized yes/no categories", {
+  expect_identical(
+    yn_2_logical(c("y", "yes", "TRUE", "n", "No", "false")),
+    c(TRUE, TRUE, TRUE, FALSE, FALSE, FALSE)
+  )
+  expect_identical(yn_2_logical(c(1, 0, 1)), c(TRUE, FALSE, TRUE))
+})
+
+test_that("yn_2_logical preserves unknown and missing values as NA", {
+  result <- yn_2_logical(c("yes", "unknown", "UNK", "", NA, "no"))
+
+  expect_identical(result, c(TRUE, NA, NA, NA, NA, FALSE))
+})
+
+test_that("yn_2_logical handles factors and invalid input", {
+  value <- factor(
+    c("Yes", "No", "Unknown", NA),
+    levels = c("Yes", "No", "Unknown", "unused")
+  )
+
+  expect_identical(yn_2_logical(value), c(TRUE, FALSE, NA, NA))
+  expect_null(yn_2_logical(c("yes", "maybe")))
+  expect_null(yn_2_logical(c(TRUE, FALSE)))
+})
+

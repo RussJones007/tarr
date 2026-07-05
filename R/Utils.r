@@ -329,8 +329,8 @@ is_yn <- function(vec){
 # show TRUE for all yn columns, FALSE otherwise
 #' Identify yes no columns in a data frame
 #' 
-#' A convenience function to find data frame columns or list items that use yes/no values that may be converted to a
-#' logical vector.
+#' id_yn_cols() is a convenience function to find data frame columns or list items that use yes/no/unknown values that
+#' may be converted to a logical vector.
 #' 
 #'
 #' @param df A data frame or list
@@ -347,43 +347,32 @@ id_yn_cols <- function(df) {
   names(df)[lgl]
 }
 
-
-# local function to handle Yes/No/Unknown into True/False/NA
 #' Convert a yes/no/unknown vector to a logical vector
 #' 
 #' For yn_2_logical a vector that use "yes/y/t/true/1", "no/n/f/false/0", and "unknown/unk/na" values are converted to a
 #' logical vector. The function first checks that it can be converted using [is_yn()].  Yes becomes TRUE, no becomes
 #' FALSE, and unknowns are set to NA.
 #'
-#' @param vec a character vector or factor.  If a factor then levels are used to check for yes/no/unknown values
+#' @param vec A character, factor, or numeric vector. Character representations are normalized to lowercase before
+#'   conversion.
 #'
-#' @return for yn_2_logical, a logical vector.  If the vector does not meet the requirement for conversion, returns NULL with a warning.
+#' @return For `yn_2_logical()`, a logical vector. If the vector does not meet the requirements for conversion, returns
+#'   `NULL`.
 #' @export
 #' @rdname is_yn
 #' @examples
 #' # todo
 yn_2_logical <- function(vec){
   yn <- is_yn(vec)
-  
-  if(! yn)  return(NULL)
-  
-  yes <- attr(yn, "values")["true_code"]
-  no  <- attr(yn, "values")["false_code"]
-  unk <- attr(yn, "values")["unk_code"]
-  
-  
-  codes <- list(
-    true  = c("(t|true|y|yes|1)"),
-    false = c("(n|no|f|false|0)"),
-    unk   = c("(u|unk|unknown|na)")
-  )  
-  
-    
-  vec <- str_to_lower(vec)
-  ret <- logical(length = length(vec))  # fills in NA  to length
-  ret[vec == yes]   <- TRUE
-  ret[vec == no]    <- FALSE
-  ret[is.na(vec) | vec == unk] <- NA  # this line may not be needed
+
+  if(!isTRUE(yn)) return(NULL)
+
+  codes <- attr(yn, "values")
+  values <- tolower(as.character(vec))
+
+  ret <- rep(NA, length(values))
+  ret[values %in% codes$true_code] <- TRUE
+  ret[values %in% codes$false_code] <- FALSE
   ret
 }
 
