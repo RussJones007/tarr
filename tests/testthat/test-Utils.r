@@ -14,3 +14,43 @@ test_that("Use of simple_conditions vector", {
   expect_contains(result, "Just a rash")
 })
 
+test_that("is_yn recognizes and normalizes yes/no codes", {
+  result <- is_yn(c("YES", "nO", "Unknown", NA))
+
+  expect_true(isTRUE(result))
+  expect_identical(
+    attr(result, "values"),
+    list(true_code = "yes", false_code = "no", unk_code = "unknown")
+  )
+
+  numeric_result <- is_yn(c(0, 1))
+  expect_true(isTRUE(numeric_result))
+  expect_identical(
+    attr(numeric_result, "values"),
+    list(true_code = "1", false_code = "0", unk_code = character())
+  )
+})
+
+test_that("is_yn supports synonyms and observed factor values", {
+  result <- is_yn(c("y", "yes", "n", "no", "u", "unk"))
+  expect_true(isTRUE(result))
+  expect_identical(
+    attr(result, "values"),
+    list(
+      true_code = c("y", "yes"),
+      false_code = c("n", "no"),
+      unk_code = c("u", "unk")
+    )
+  )
+
+  factor_result <- is_yn(factor(c("Yes", "No"), levels = c("Yes", "No", "invalid")))
+  expect_true(isTRUE(factor_result))
+})
+
+test_that("is_yn rejects non-yes/no vectors", {
+  expect_false(is_yn(logical()))
+  expect_false(is_yn(c(NA_character_, NA_character_)))
+  expect_false(is_yn(c("unknown", "unk")))
+  expect_false(is_yn(c("yes", "maybe")))
+})
+

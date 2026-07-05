@@ -290,51 +290,40 @@ find_transitive_minR <- function(package) {
 #' converted to a logical vector. The yes values may be; yes, y, true, t, or 1.  The no values may be; no, n, false, f, or '0'.
 #' The unknown values may be; unknown, unk, u, or na. Missing values, NA, may be present.
 #' 
-#' To be a yes/no/unk vector The number of unique values must be between 2, 3, or 4. Having 4 unique values is only
-#' possible if the missing NA is one of the values.  The unique values in the vector should have no more than one 
-#' value from the yes, no, and unknown categories.  The function is not sensitive to case.
+#' All observed, non-missing values must be recognized yes, no, or unknown codes. Multiple synonyms from the same
+#' category are allowed, and the function is not sensitive to case. A vector containing only unknown values is not
+#' considered a yes/no vector.
 #' 
 #' 12/2/2025 Logical vectors return  FALSE.
 #'
-#' @param vec a character vector or factor.  If a factor then levels are used to check for yes/no/unknown values
+#' @param vec A character, factor, or numeric vector. Factors are checked using their observed values rather than all
+#'   defined levels.
 #'
-#' @return for is_yn(),  TRUE or FALSE.  If TRUE, the attribute 'value' is set to the yes/no/unknown unique values  
+#' @return For `is_yn()`, `TRUE` or `FALSE`. A `TRUE` result has a `values` attribute containing a named list of the
+#'   observed yes, no, and unknown codes. These values are normalized to lowercase character strings.
 #' @export
 #' @examples
 #' # todo
 is_yn <- function(vec){
-  if(is.logical(vec)) return(FALSE)
-  if( is.factor(vec)) vec <- levels(vec)
-  if( ! is.character(vec)) vec <- as.character(vec)
-  values <- unique(vec) |> str_to_lower() |> unique() |> na.omit()
-  if(! between(length(values), 2,4)) {
-    return(FALSE)
-  }
-  
-  # find each code that can be used
+  if(is.logical(vec) || length(vec) == 0L) return(FALSE)
+
+  values <- unique(tolower(as.character(vec)))
+  values <- values[!is.na(values)]
+
+  if(length(values) == 0L) return(FALSE)
+
   codes <- list(
     true_code  = c("t", "true", "y", "yes", "1"),
     false_code = c("n", "no", "f", "false", "0"),
     unk_code   = c("u", "unk", "unknown", "na", "")
-  )  
-  
-  if(! all(values  %in% unlist(codes))) return(FALSE)
-  
-  value_search <- compose(
-    \(lst) discard(.x = lst, .p = \(x) length(x) == 0),
-    \(val) map(codes, \(cd) (val == cd) |> which())
   )
-  
-  atr <- map(values, value_search) |> unlist() |> 
-    imap( \(x, nm) codes[[nm]][x]) |> unlist()
-  
-  
-  if(length(atr) & any(names(atr) %in% c("true_code", "false_code")) ){
-    ret <- structure(TRUE, values = atr)
-    return(ret)
-  }
-  
-  return(FALSE)
+
+  if(!all(values %in% unlist(codes, use.names = FALSE))) return(FALSE)
+
+  detected <- lapply(codes, intersect, y = values)
+  if(!length(detected$true_code) && !length(detected$false_code)) return(FALSE)
+
+  structure(TRUE, values = detected)
 }
 
 # show TRUE for all yn columns, FALSE otherwise
