@@ -43,45 +43,37 @@ charts. Over time additional functions, data sets, and list variables have been
 created to simplify workflows and add capabilities.
 
 This vignette reviews installation, standard folders accessed, helpful
-lists, and helper functions. Separate vignettes introduce different
-topics including:
+lists, and helper functions. Addtional vignettes introduce important package
+capabilities including:
 
 **Reading and Processing** NBS and EpiTrax data exports. Covers the
 functions to read the data and how the master file of all case records
 is constructed and maintained.
 
-**Ages and Age Groups** demonstrates the functions for calculating ages
-and age groups. It also covers the class "age_group" and how it can be
-used.
-
 **Map & cluster** describes the geographic layers provided, functions
 that aid mapping, and spatial cluster detection.
-
-**Population** workflows use the tarr.pop package. Load `tarr.pop`
-separately when you need its population data sets or population helper
-functions.
 
 ## Installation & project setup
 
 The package is locally maintained and as of
 `r format(Sys.Date(), "%B %d, %Y")`, may be found on the Epidemiology
-shared drive in the "G:/Data/Packages/" folder as "tarr_0.0.0.xxxx.zip.
-The xxxx is a number that represents the current development version.
-Several other packages are needed for tarr to operate properly. Since
+shared drive folder as `r file.path("G:/Data/Packages", paste0("tarr.", utils::packageVersion("tarr")))`.
+ Several other packages are needed for tarr to operate properly. Since
 the package is not hosted on CRAN, dependencies are not automatically
-installed. Source the `tarr_depend.r` file in RStudio. This will install
+installed. Source the `tarr_depend.r` in the same foler as the package. This will install
 most, if not all, of the R packages needed for the tarr package to
-properly function. Install and load tarr.pop separately for population
-figures, and tarr.brand separately for Tarrant County branding colors
-and items.
+properly function. Two related packages are also available for installation:
+
+ - tarr.pop for population data and manipulation. 
+ - tarr.brand for Tarrant County branding colors and seals
 
 #### Note
 
-Use of the package is expected to occur in the secure environment of the
+Use of the tarr package is expected to occur in the secure environment of the
 county network, i.e., behind the county firewall. Data from NEDSS and
-EpiTrax contain personal health information. You can practice using some
-of the functions outside of the county network by using the
-`synthetic_outbreak` tibble available within the package.
+EpiTrax contain personal health information. Outside of the network
+You can practice using some of the functions outside of the county network by 
+using the `synthetic_outbreak` tibble available within the package. 
 
 ## Standard folders
 
@@ -97,7 +89,7 @@ with documents and data.
 | data | G:/Data/Commmunicable Disease/Current Year | Exported csv files from EpiTrax and NBS |
 | communicable | G:/Data/Commmunicable Disease | Parent folder for "data" folder |
 | scripts | G:/Data/Commmunicable Disease/R Scripts | A folder of R scripts to work on exported data |
-| cities | G:/Data/GIS/Shape Files/Tarrant/Cities | GIS files for Tarrant Cities |
+| cities | G:/Data/GIS/Shape Files/Tarrant/Cities | GIS polygon file for Tarrant Cities |
 | spatial | G:/Data/GIS/Shape Files | General GIS files with several subfolders |
 | population | G:/Data/Population | Census, projections, and estimates files |
 | monthReportCode | E:/Monthly Report/Code | The folder for the monthly report R project |
@@ -113,7 +105,7 @@ in the spatial folder:
 # The path to the data folder
 paths$spatial
 
-# Lit the file names in the spatial  folder
+# List the file names in the spatial  folder
 files <- list.files(path = paths$spatial)  # Search for all files
 head(files)  # View the first six in the folder
 rm(files)
@@ -130,12 +122,13 @@ vectors to logical vectors.
 
 A set of functions are provided for retrieving MMWR weeks (a.k.a. epi
 weeks) and dates, The basic `mmwrWeek(date)` function returns the
-numeric MMWR week of a date vector. Conversely you can get the date from
-an MMWR week and year using `mmwrWeekBegin(weekNum, yr)`,
-`mmwrWeekEnd(weeknum, yr)`, and
+numeric MMWR week of a date vector. Conversely you can get the first date 
+from an MMWR week and year using `mmwrWeekBegin(weekNum, yr)`,
+the last date of the week `mmwrWeekEnd(weeknum, yr)`, and the month of the
+MMWR week passing he week number and year 
 `mmwrWeekMonth(weeknum, yr, label, abbr)`.
 
-You can use either a `Date` or a `POSIXct datetime` to retrieve the MMWR
+You may use either a `Date` or a `POSIXct datetime` to retrieve the MMWR
 week number. This is useful if you want to calculate the MMWR week for
 dates like onset, birth, report, diagnosis, etc. Here's an example of
 using onset and getting the week number.
@@ -143,7 +136,7 @@ using onset and getting the week number.
 ```{r mmwr_week, eval=TRUE}
 
 # sample data
-data("your_data_frame_name", package = "tarr")
+data("synthetic_outbreak", package = "tarr")
 foo_flu <- synthetic_outbreak |> 
            dplyr::filter(condition == "fooflu") 
 
@@ -153,6 +146,8 @@ foo_flu$mmwr_week <- mmwrWeek(foo_flu$onset)
 # look at onset dates and epi week for the first few records
 foo_flu[, c("onset", "mmwr_week")] |> head()
 
+# table by week
+janitor::tabyl(foo_flu$mmwr_week)
 ```
 
 You may wish to convert an MMWR week to an actual date in a given year.
@@ -194,16 +189,16 @@ simple wrappers around the clipr package functions read_clip_tbl() and
 write_clip(). Passing a data frame to write.clip() will place a copy of
 the data frame on the clipboard which can then be posted in another
 program like Excel or Word. Conversely if you wish to move tabular data
-from a program like Excel, highlighligt the data, including headers, and
+from a program like Excel, highlight the data including headers, and
 press 'ctrl-c' to copy the data to the clipboard. In yor R script you
-can assign the clipbord data like so `dframe <- read.clip()`.
+can assign the clipboard data to a data frame like so `df <- read.clip()`.
 
 #### Special string functions
 
 Several simple character string functions are provided to extract
 classes of characters. They are collectivley named "mash" or "only"
 indicating the functions return only certain character types and can
-result in the character string being "mashed". They can be handy when
+result in the character string being "mashed". They are useful when
 you want to have only alphanumeric characters in a string to improve
 string matching.
 
@@ -238,16 +233,15 @@ rm(addr_roads)
 
 #### Character to logical vectors
 
-In many data sets, character strings Yes/No or integers 0/1 are used for
-a TRUE/FALSE variable. Conveting these vectors to a logical vector can
-be advantageous to simplify analysis. These "Yes/No" set of functions
-are used for this are:
+In many data sets, character strings containing Yes/No or integers 0/1 are used for a TRUE/FALSE variable. Converting
+these vectors to an R logical vector can be advantageous to simplify analysis. The "Yes/No" set of functions are used
+for this:
 
--   `is_yn(vec)` checks if vector is a "Yes/No" variable. Returns TRUE
-    if all the values fall in a YES/NO/Unknown value set regardless or
+-   `is_yn(vec)` checks if vector is a "Yes/No" or 0/1 variable. Returns TRUE
+    if all the values fall in a YES/NO/Unknown value set regardless of
     character case. Those sets include "Yes/No/Unknown" or Unk, "Y/N/U",
-    or for numeric vectors 0 (FALSE) or 1 (TRUE). If the vector is
-    "Yes/No" it returns TRUE. An attribute called "values" is set with
+    or for numeric vectors 0 (FALSE), 1 (TRUE), NA (missing). If the vector is
+    "Yes/No" it returns TRUE. An attribute of the returned object called "values" is set with
     the "Yes/No/Unknown" value set used in the vector.
 
 -   `id_yn_cols(df)`identifies the "Yes/No" columns in a data frame. The
@@ -278,7 +272,7 @@ rm(recovered, rec_lgl, rec_df)
 #### General vector conversion function
 
 It is not unusual to have two vector of two different types, but you
-want them to be the same type.
+want them to be the same type. R and used package will have cpnversion functions
 There are many conversion 'as' functions available in R,like;
 as.numeric(), as.character(), as.logical to convert vectors to a
 different type. The `convert_type(vec1, vec2)` is a generalization of
