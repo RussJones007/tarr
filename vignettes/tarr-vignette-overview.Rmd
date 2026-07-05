@@ -1,12 +1,12 @@
 ---
-title: "Packge Overview"
+title: "Package Overview"
 output: 
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 2
     number_sections: false
 vignette: >
-  %\VignetteIndexEntry{Packge Overview}
+  %\VignetteIndexEntry{Package Overview}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
@@ -16,8 +16,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 
-library(tidyverse, quietly = TRUE)
-library(tarr, quietly      = TRUE)
+library(tarr, quietly = TRUE)
 
 # Setup for examples (feel free to change these defaults)
 knitr::opts_chunk$set(
@@ -34,61 +33,95 @@ knitr::opts_chunk$set(
 
 ```
 
-## Overview & goals
+## Overview and goals
 
-The tarr package includes various functions and lists to assist
-Epidemiologists at the Tarrant County Public Health Department. It was
-originally written to support disease data manipulation and creating
-charts. Over time additional functions, data sets, and list variables have been
-created to simplify workflows and add capabilities.
+The `tarr` package includes functions, data sets, and lists that support
+epidemiologists at Tarrant County Public Health. It was originally
+written to support disease-data manipulation and chart creation. Over
+time, additional functions and data have been added to simplify local
+workflows and extend the package's capabilities.
 
-This vignette reviews installation, standard folders accessed, helpful
-lists, and helper functions. Addtional vignettes introduce important package
-capabilities including:
+This vignette reviews installation, standard folders, useful lists, and
+helper functions. Additional vignettes introduce important
+package capabilities, including:
 
-**Reading and Processing** NBS and EpiTrax data exports. Covers the
-functions to read the data and how the master file of all case records
-is constructed and maintained.
+- **Reading and processing** covers NBS and EpiTrax data exports,
+  including functions that read the data and maintain the master file of
+  case records. See
+  `vignette("epitrax-and-nbs-workflow", package = "tarr")`.
 
-**Map & cluster** describes the geographic layers provided, functions
-that aid mapping, and spatial cluster detection.
+- **Maps and clusters** describes the provided geographic layers,
+  mapping helpers, and spatial-cluster detection. See
+  `vignette("maps-and-clusters", package = "tarr")`.
 
 ## Installation & project setup
 
-The package is locally maintained and as of
-`r format(Sys.Date(), "%B %d, %Y")`, may be found on the Epidemiology
-shared drive folder as `r file.path("G:/Data/Packages", paste0("tarr.", utils::packageVersion("tarr")))`.
- Several other packages are needed for tarr to operate properly. Since
-the package is not hosted on CRAN, dependencies are not automatically
-installed. Source the `tarr_depend.r` in the same foler as the package. This will install
-most, if not all, of the R packages needed for the tarr package to
-properly function. Two related packages are also available for installation:
+The package is intended to be installed on Tarrant County Windows
+workstations. It is maintained locally and distributed from
+`G:/Data/Packages` as a Windows binary ZIP file. The filename includes
+the package version, for example `tarr_<version>.zip`.
 
- - tarr.pop for population data and manipulation. 
- - tarr.brand for Tarrant County branding colors and seals
+Because `tarr` is not hosted on CRAN, install its dependencies before
+installing the package. Source `tarr_depend.r` from the same shared-drive
+folder:
 
-#### Note
+```{r install-dependencies, eval=FALSE}
+source("G:/Data/Packages/tarr_depend.r")
+```
 
-Use of the tarr package is expected to occur in the secure environment of the
-county network, i.e., behind the county firewall. Data from NEDSS and
-EpiTrax contain personal health information. Outside of the network
-You can practice using some of the functions outside of the county network by 
-using the `synthetic_outbreak` tibble available within the package. 
+### Install the Windows binary with RStudio
+
+1. Open the Windows version of RStudio.
+2. Source `G:/Data/Packages/tarr_depend.r` to install required package
+   dependencies.
+3. Select **Tools > Install Packages**.
+4. For **Install from**, select
+   **Package Archive File (.zip; .tar.gz)**.
+5. Select the desired R library under **Install to Library**.
+6. Browse to `G:/Data/Packages` and select the current `tarr` binary ZIP
+   file.
+7. Click **Install** and restart the R session after installation.
+
+Verify the installation from the RStudio console:
+
+```{r verify-installation, eval=FALSE}
+library(tarr)
+packageVersion("tarr")
+```
+
+Two related packages are also available for separate installation:
+
+- `tarr.pop` provides population data and population-data helpers.
+- `tarr.brand` provides Tarrant County branding colors and seals.
+
+### Protected health information
+
+> **Warning:** NEDSS and EpiTrax exports may contain protected health
+> information (PHI). Use real case data only within the approved secure
+> county environment and behind the county firewall. Do not copy, upload,
+> email, or process identifiable case data on personal devices, public
+> services, or systems that have not been approved for PHI. Follow all
+> applicable Tarrant County privacy, security, retention, and minimum-
+> necessary-use requirements.
+
+Outside the secure county environment, use only synthetic or properly
+de-identified data. The bundled `synthetic_outbreak` tibble is available
+for practice and examples.
 
 ## Standard folders
 
-The tarr package reads and processes data placed in standard folders or
-sub-folders on the shared epidemiology (E:) and data (G:) drives. The
-different folder paths are kept in a list variable called **paths**
-which references the main folders. The table below shows the "path" to
-each folder referenced. In turn each of those folders have sub-folders
-with documents and data.
+The `tarr` package is intended for local use with the current folder
+structure on the shared epidemiology (`E:`) and data (`G:`) drives. The
+`paths` list contains references to commonly used folders. These values
+are environment-specific rather than portable defaults. If a drive is
+remapped or a folder is renamed or moved, the corresponding `paths`
+entry must be updated before dependent workflows will work correctly.
 
 | Name | Folder | Data Types |
 |:---------------|:----------------------------|:--------------------------|
-| data | G:/Data/Commmunicable Disease/Current Year | Exported csv files from EpiTrax and NBS |
-| communicable | G:/Data/Commmunicable Disease | Parent folder for "data" folder |
-| scripts | G:/Data/Commmunicable Disease/R Scripts | A folder of R scripts to work on exported data |
+| data | G:/Data/Communicable Disease/Current Year | Exported CSV files from EpiTrax and NBS |
+| communicable | G:/Data/Communicable Disease | Parent folder for the `data` folder |
+| scripts | G:/Data/Communicable Disease/R Scripts | R scripts used with exported data |
 | cities | G:/Data/GIS/Shape Files/Tarrant/Cities | GIS polygon file for Tarrant Cities |
 | spatial | G:/Data/GIS/Shape Files | General GIS files with several subfolders |
 | population | G:/Data/Population | Census, projections, and estimates files |
@@ -98,14 +131,14 @@ with documents and data.
 | immunization | E:/Immunization | Immunization data |
 | flu | PublicHealth/Shared/EPI/Influenza | Influenza surveillance folder |
 
-Here is an example of using the `paths` variable to list all the files and folders in the 
-in the spatial folder:
+Here is an example of using `paths` to list files and folders in the
+spatial-data folder:
 
 ```{r paths, eval=TRUE}
 # The path to the data folder
 paths$spatial
 
-# List the file names in the spatial  folder
+# List the file names in the spatial folder
 files <- list.files(path = paths$spatial)  # Search for all files
 head(files)  # View the first six in the folder
 rm(files)
@@ -113,22 +146,20 @@ rm(files)
 
 ## Miscellaneous helpers
 
-Several utility functions are included. Among these are functions to
-retrieve MMWR weeks and dates, read and write to the clipboard, some
-character string manipulations, detecting and converting character
-vectors to logical vectors.
+Several utility functions are included. These retrieve MMWR weeks and
+dates, read and write tabular clipboard data, manipulate character
+strings, and detect and convert yes/no vectors.
 
-#### MMWR Weeks
+### MMWR weeks
 
-A set of functions are provided for retrieving MMWR weeks (a.k.a. epi
-weeks) and dates, The basic `mmwrWeek(date)` function returns the
-numeric MMWR week of a date vector. Conversely you can get the first date 
-from an MMWR week and year using `mmwrWeekBegin(weekNum, yr)`,
-the last date of the week `mmwrWeekEnd(weeknum, yr)`, and the month of the
-MMWR week passing he week number and year 
-`mmwrWeekMonth(weeknum, yr, label, abbr)`.
+A set of functions retrieves MMWR weeks (also called epidemiological
+weeks) and their dates. The basic `mmwrWeek(date)` function returns the
+numeric MMWR week for a date vector. Conversely,
+`mmwrWeekBegin(weekNum, yr)` returns the first date of an MMWR week,
+`mmwrWeekEnd(weekNum, yr)` returns its last date, and
+`mmwrWeekMonth(weekNum, yr, label, abbr)` returns its month.
 
-You may use either a `Date` or a `POSIXct datetime` to retrieve the MMWR
+You may use either a `Date` or a `POSIXct` datetime to retrieve the MMWR
 week number. This is useful if you want to calculate the MMWR week for
 dates like onset, birth, report, diagnosis, etc. Here's an example of
 using onset and getting the week number.
@@ -151,58 +182,60 @@ janitor::tabyl(foo_flu$mmwr_week)
 ```
 
 You may wish to convert an MMWR week to an actual date in a given year.
-Two functions can do that; mmwrWeekBegin() returns the date on the
-Sunday of the week and mmwrWeekEnd() gives the Saturday of that week. If
-you prefer the mid week date,it's as simple as giving a week number and
-year to mmwrWeekBegin() + 3, to get the date on Wednesday.
+Two functions can do that: `mmwrWeekBegin()` returns the Sunday of the
+week, and `mmwrWeekEnd()` returns the Saturday. To obtain the midweek
+date, add three days to the value returned by `mmwrWeekBegin()`.
 
-In addition to the week dates, the mmwrWeekMonth() function can be used
+In addition to the week dates, `mmwrWeekMonth()` can be used
 to get the month number, full name, or abbreviation. By default it
-returns the month number for a given weekNum and yr. When the `label`
+returns the month number for a given `weekNum` and `yr`. When the `label`
 argument is set to TRUE, the function returns the full month name. When
-the `label` and `abbrv` arguments are both set to TRUE, the month
+the `label` and `abbr` arguments are both set to `TRUE`, the month
 abbreviation is returned.
 
 Using the date instead of the week number can help in interpreting
 charts as a person does not have to mentally calculate the month when an
 event occurs. The ability to convert a week number to a date in a
-specific year also allows you to show different years data using the
+specific year also allows you to show data from different years using the
 same date scale.
 
 ```{r mmwr_begin_end, eval=TRUE}
 # show dates and month information from mmwrWeek
 foo_flu <- foo_flu |> 
   head() |> 
-  mutate(begin_date = mmwrWeekBegin(weekNum = mmwr_week, yr = 2020),
-         end_date   = mmwrWeekEnd(weekNum = mmwr_week, yr = 2020),
-         month_num  = mmwrWeekMonth(mmwr_week, 2020),
-         month_name = mmwrWeekMonth(mmwr_week, 2020, label = TRUE)
-         )  
-  foo_flu[, c("mmwr_week", "begin_date", "end_date", "month_num", "month_name")] |> head()
+  dplyr::mutate(
+    mmwr_year = lubridate::epiyear(onset),
+    begin_date = mmwrWeekBegin(weekNum = mmwr_week, yr = mmwr_year),
+    end_date = mmwrWeekEnd(weekNum = mmwr_week, yr = mmwr_year),
+    month_num = mmwrWeekMonth(mmwr_week, mmwr_year),
+    month_name = mmwrWeekMonth(mmwr_week, mmwr_year, label = TRUE)
+  )
+
+foo_flu[, c("mmwr_week", "begin_date", "end_date", "month_num", "month_name")] |>
+  head()
 ```
 
-#### Read and write to the clipboard
+### Read and write to the clipboard
 
 Two functions are provided to interact with the clipboard; `read.clip()`
 and `write.clip(x)`. Both act on tabular data like a data frame and are
-simple wrappers around the clipr package functions read_clip_tbl() and
-write_clip(). Passing a data frame to write.clip() will place a copy of
-the data frame on the clipboard which can then be posted in another
-program like Excel or Word. Conversely if you wish to move tabular data
-from a program like Excel, highlight the data including headers, and
-press 'ctrl-c' to copy the data to the clipboard. In yor R script you
-can assign the clipboard data to a data frame like so `df <- read.clip()`.
+simple wrappers around `clipr::read_clip_tbl()` and
+`clipr::write_clip()`. Passing a data frame to `write.clip()` places a
+copy on the clipboard, which can then be pasted into another program,
+such as Excel or Word. To move tabular data from Excel into R, highlight
+the data including its headers, press **Ctrl+C**, and then assign the
+clipboard data with `df <- read.clip()`.
 
-#### Special string functions
+### Special string functions
 
 Several simple character string functions are provided to extract
-classes of characters. They are collectivley named "mash" or "only"
+classes of characters. They are collectively named "mash" or "only",
 indicating the functions return only certain character types and can
-result in the character string being "mashed". They are useful when
+result in the character string being "mashed." They are useful when
 you want to have only alphanumeric characters in a string to improve
 string matching.
 
-The functions `only_digit(string)` and `mash_phone(string)` are
+The functions `only_digits(string)` and `mash_phone(string)` are
 synonymous, returning only digit characters.
 
 ```{r mash_phone, eval=TRUE}
@@ -213,7 +246,7 @@ phone_numbers <- c("817/321-4700", "817-321-2366", "(214)972-9840")
 # show only the digits
 mash_phone(phone_numbers)
 
-# or using the synonmous function
+# or using the synonymous function
 only_digits(phone_numbers) 
 rm(phone_numbers)
 ```
@@ -222,7 +255,14 @@ The `only_alpha()` and `mash_name()` functions are also synonymous,
 returning only alphabetic characters.
 
 ```{r only_alpha, eval=TRUE}
-addr_roads <- c("5001 Riverside", "1101 South Main Street", "Interstate 35", "Highway 287", "Hwy 10", "200 Weatherford Street")
+addr_roads <- c(
+  "5001 Riverside",
+  "1101 South Main Street",
+  "Interstate 35",
+  "Highway 287",
+  "Hwy 10",
+  "200 Weatherford Street"
+)
   
 # only alphabetic characters
 mash_name(addr_roads)
@@ -231,29 +271,35 @@ only_alpha(addr_roads)
 rm(addr_roads)
 ```
 
-#### Character to logical vectors
+### Character to logical vectors
 
-In many data sets, character strings containing Yes/No or integers 0/1 are used for a TRUE/FALSE variable. Converting
-these vectors to an R logical vector can be advantageous to simplify analysis. The "Yes/No" set of functions are used
-for this:
+In many data sets, character strings containing yes/no values or
+integers containing `0`/`1` are used in place of `FALSE`/`TRUE`.
+Converting these vectors to R logical vectors can simplify analysis.
+The following functions support this conversion:
 
--   `is_yn(vec)` checks if vector is a "Yes/No" or 0/1 variable. Returns TRUE
-    if all the values fall in a YES/NO/Unknown value set regardless of
-    character case. Those sets include "Yes/No/Unknown" or Unk, "Y/N/U",
-    or for numeric vectors 0 (FALSE), 1 (TRUE), NA (missing). If the vector is
-    "Yes/No" it returns TRUE. An attribute of the returned object called "values" is set with
-    the "Yes/No/Unknown" value set used in the vector.
+- `is_yn(vec)` returns `TRUE` when every observed, nonmissing value is a
+  recognized yes, no, or unknown code and the vector contains at least
+  one yes or no value. Matching is case-insensitive. Numeric `1` means
+  true and `0` means false. A `TRUE` result has a `values` attribute: a
+  named list containing the observed codes normalized to lowercase.
 
--   `id_yn_cols(df)`identifies the "Yes/No" columns in a data frame. The
-    function returns the column names that can be converted to a logical
-    vector.
+- `id_yn_cols(df)` identifies the yes/no columns in a data frame and
+  returns the names of columns that can be converted to logical vectors.
 
--   `yn_2_logical(vec)` takes a "Yes/No" vector and converts it to a
-    logical vector. "Unknown" values are converted to NA.
+- `yn_2_logical(vec)` converts a recognized yes/no vector to a logical
+  vector. The codes `u`, `unk`, `unknown`, `na`, blank strings, and
+  missing values are converted to `NA`.
 
 ```{r yn_funcs, eval=TRUE}
 
-recovered <- sample(x = c("Yes", "No", "Unk"), size = 15, replace = TRUE, prob = c(0.50, 0.30, 0.20))
+set.seed(2026)
+recovered <- sample(
+  x = c("Yes", "No", "Unk"),
+  size = 15,
+  replace = TRUE,
+  prob = c(0.50, 0.30, 0.20)
+)
 print(recovered)
 
 is_yn(recovered)
@@ -269,16 +315,14 @@ rm(recovered, rec_lgl, rec_df)
 
 ```
 
-#### General vector conversion function
+### General vector conversion function
 
-It is not unusual to have two vector of two different types, but you
-want them to be the same type. R and used package will have cpnversion functions
-There are many conversion 'as' functions available in R,like;
-as.numeric(), as.character(), as.logical to convert vectors to a
-different type. The `convert_type(vec1, vec2)` is a generalization of
-this concept using a template vector. The function attempts to convert
-vec1 to template vector passed as vec2 . It works well for base types
-where conversion in R is allowed.
+It is common to have two vectors of different types when they need to
+share the same type. R provides conversion functions such as
+`as.numeric()`, `as.character()`, and `as.logical()`. The
+`convert_type(vec1, vec2)` function generalizes this approach by using
+`vec2` as a type template. It attempts to convert `vec1` to the type of
+`vec2` when R supports that conversion.
 
 ```{r type_conversion, eval=TRUE}
 

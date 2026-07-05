@@ -1,0 +1,397 @@
+---
+title: "Reading and Combining EpiTrax and NBS Data"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    number_sections: false
+vignette: >
+  %\VignetteIndexEntry{Reading and Combining EpiTrax and NBS Data}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tarr, quietly = TRUE)
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE,
+  eval = FALSE
+)
+```
+
+## Overview
+
+The `tarr` package provides separate functions for reading EpiTrax and
+NBS exports because the two systems use different field names, report
+formats, and value conventions. The general process is:
+
+1. Export the appropriate CSV report from EpiTrax or NBS.
+2. Import and process each report with its system-specific function.
+3. Convert the processed EpiTrax data to the NBS-compatible schema.
+4. Combine records and remove duplicates using the intended workflow.
+
+The first part of this vignette explains what each public function does.
+The second part shows how the functions fit together in routine
+workflows.
+
+### Protected health information
+
+> **Warning:** EpiTrax and NBS exports may contain protected health
+> information (PHI). Use real exports only within the approved secure
+> county environment. Do not copy, upload, email, or process identifiable
+> case data on unapproved devices or services. Outside the secure county
+> environment, use only synthetic or properly de-identified data.
+
+## Functions
+
+| Function | Primary purpose |
+|:--|:--|
+| `epitrax_import()` | Read and process an EpiTrax line-list CSV |
+| `nbs_import()` | Read an NBS CSV and pass it through `nbs_process()` |
+| `nbs_process()` | Standardize an NBS report already loaded in R |
+| `epitrax_2_nbs_format()` | Convert processed EpiTrax records to the NBS-compatible schema |
+| `retrieve_base_data()` | Read the maintained NBS base Parquet file |
+| `baseData()` | Combine historical NBS base data with current EpiTrax records |
+| `baseNBSUpdate()` | Replace a finalized date range in the maintained NBS base |
+| `construct_nbs_base()` | Rebuild the NBS base from the standard folder of NBS CSV exports |
+
+### `epitrax_import()`
+
+`epitrax_import()` reads and processes an EpiTrax line-list CSV. Specifically the month report export from EPiTrax.  Supply the filename with `.file`, or omit it to select the file interactively.
+
+```{r epitrax-import}
+epitrax_file <- file.path(
+  paths$data,
+  "EpiTrax_year_to_date.csv"
+)
+
+epitrax <- epitrax_import(
+  .file = epitrax_file,
+  .include.all = FALSE,
+  .use_cache = FALSE
+)
+```
+
+The function:
+
+- reads all source columns as character data and cleans their names;
+- verifies that the file resembles an EpiTrax line-list report;
+- returns confirmed and probable cases by default;
+- converts date, MMWR week, ZIP code, latitude, and longitude fields;
+- adds `event_month`, `onset_mmwr_week`, and `age_yrs`; and
+- checks for missing county values as a result of address at diagnosis not selected.
+
+Set `.include.all = TRUE` to include confirmed, probable, suspect,
+lost-to-follow-up, and not-a-case records. This option does not mean
+that every possible status value is returned.
+
+`epitrax_import()` does not remove duplicate records. De-duplication is
+performed later when EpiTrax records are combined with the NBS base.
+
+To inspect records with a missing county from lack of address at diagnosis, use:
+
+```{r epitrax-missing-county}
+missing_county <- epitrax_import(
+  .file = epitrax_file,
+  .use_cache = FALSE,
+  .return_missing_county = TRUE
+)
+```
+
+### `nbs_import()`
+
+`nbs_import()` reads an NBS CSV report and passes the resulting data frame to `nbs_process()`. `nbs_import()`  function targets the NBS report of `All cases with jurisdiction security` and all columns included in the report.  
+
+
+```{r nbs-import}
+nbs_file <- file.path(
+  paths$communicable,
+  "NBS",
+  "Jan_2025_to_Dec_2025.csv"
+)
+
+nbs <- nbs_import(
+  .file = nbs_file,
+  .include.all = FALSE,
+  .use_cache = TRUE
+)
+```
+
+By default, `nbs_import()` returns confirmed and probable cases. It also
+uses a Parquet cache beside the source CSV. If a matching Parquet file
+exists and `.use_cache = TRUE` which os the default, the cached data are returned. Set
+`.use_cache = FALSE` after replacing or correcting the CSV so that the
+source report is processed again.
+
+### `nbs_process()`
+
+`nbs_process()` processes an NBS report that has already been read into
+R. Most users should call `nbs_import()`, which handles both reading and
+processing. Call `nbs_process()` directly when the report is already a
+data frame or when developing and validating an import workflow.
+
+```{r nbs-process}
+nbs_raw <- utils::read.csv(
+  nbs_file,
+  header = TRUE,
+  check.names = TRUE,
+  stringsAsFactors = FALSE
+)
+
+nbs <- nbs_process(
+  .df = nbs_raw,
+  .include.all = FALSE
+)
+```
+
+The function:
+
+- recognizes supported NBS report layouts;
+- combines paired NBS reports when the selected format requires a
+  second export;
+- retains Tarrant County records with valid person and case-status data;
+- returns confirmed and probable cases by default;
+- standardizes dates, numeric fields, ZIP codes, city names, sex, race,
+  ethnicity, and case-status values;
+- converts recognized yes/no/unknown fields to logical vectors;
+- calculates age, event month, and MMWR dates; and
+- selects fields used in the common NBS/EpiTrax schema.
+
+The `.report_type` argument bypasses automatic report classification and
+is intended primarily for package development and controlled imports.
+
+### `epitrax_2_nbs_format()`
+
+`epitrax_2_nbs_format()` translates processed EpiTrax records to the
+NBS-compatible field names and data types. Run it after
+`epitrax_import()` and before combining EpiTrax and NBS records.
+
+```{r epitrax-to-nbs}
+epitrax_nbs <- epitrax_2_nbs_format(
+  et = epitrax,
+  nbs = nbs
+)
+```
+
+When `nbs` is supplied, it acts as the schema template. The returned
+EpiTrax data contain the relevant NBS columns with compatible types.
+The function also maps EpiTrax condition names to their NBS equivalents
+and converts recognized yes/no/unknown fields to logical vectors.
+
+This function does not remove duplicates.
+
+### `retrieve_base_data()`
+
+`retrieve_base_data()` reads the processed NBS base Parquet file.  That parquet file contains 
+all the probale and confirmed case records for Tarrant County since 
+January 1, 2005 to the last update.  The file path to the base NBS data by default is 
+`r file.path(paths$communicable, "NBS", "nbs_base.parquet")`
+
+```{r retrieve-base}
+nbs_base <- retrieve_base_data(nbs_base_file)
+
+```
+
+Use this function when you need only the historical NBS base without
+adding current EpiTrax records.
+
+### `baseData()`
+
+`baseData()` is the main production function for returning historical
+NBS data together with current EpiTrax records.
+
+```{r base-data}
+all_cases <- baseData(
+  .base = nbs_base_file,
+  .chooseNew = TRUE
+)
+```
+
+With `.chooseNew = TRUE`, the function:
+
+1. reads the NBS base Parquet file;
+2. prompts for the current EpiTrax CSV;
+3. processes the EpiTrax report;
+4. converts EpiTrax fields to the NBS-compatible schema;
+5. keeps columns shared by both sources;
+6. labels each record as `"Epitrax"` or `"NBS"`; and
+7. removes duplicate records.
+
+EpiTrax records are placed before NBS records during the final
+combination. When the same person, birth time, condition, and event date
+occur in both sources, the EpiTrax record is retained. Use
+`.chooseNew = FALSE` to return only the existing NBS base.
+
+### Base maintenance functions
+
+`baseNBSUpdate()` replaces an event-date range in the NBS base with a
+newly exported and processed NBS report. It backs up the existing base
+before writing the replacement. The selected CSV filename must follow
+the expected pattern, such as `Jan_2025_to_Dec_2025.csv`.
+
+```{r base-update}
+updated_base <- baseNBSUpdate(.base = nbs_base_file)
+```
+
+`construct_nbs_base()` rebuilds `nbs_base.parquet` from the set of NBS
+CSV exports in the standard NBS folder under `paths$communicable`. It is
+intended for recovery, correction, or a deliberate full rebuild rather
+than routine report analysis.
+
+```{r construct-base}
+construct_nbs_base()
+```
+
+Both functions overwrite the base after creating a backup or obtaining
+interactive confirmation. Confirm the selected files, date ranges, and
+backup location before proceeding.
+
+## Workflows
+
+### Read and inspect one EpiTrax export
+
+Use this workflow when the analysis needs EpiTrax fields in their native
+cleaned form and does not need to combine them with NBS data.
+
+```{r workflow-epitrax}
+epitrax <- epitrax_import(
+  .file = epitrax_file,
+  .include.all = FALSE,
+  .use_cache = FALSE
+)
+
+nrow(epitrax)
+names(epitrax)
+table(epitrax$patient_lhd_case_status, useNA = "ifany")
+summary(epitrax$patient_event_onset_date)
+```
+
+Review unexpected status values, missing counties, missing event dates,
+and invalid coordinates before using the records in reports.
+
+### Read and inspect one NBS export
+
+Use this workflow for an NBS-only report or to validate an NBS export
+before updating the base.
+
+```{r workflow-nbs}
+nbs <- nbs_import(
+  .file = nbs_file,
+  .include.all = FALSE,
+  .use_cache = FALSE
+)
+
+nrow(nbs)
+names(nbs)
+table(nbs$Case.Status, useNA = "ifany")
+range(nbs$Event.Date, na.rm = TRUE)
+```
+
+Setting `.use_cache = FALSE` is useful during validation because it
+forces the selected CSV to be read and processed.
+
+### Read and combine explicit EpiTrax and NBS files
+
+This workflow is useful when you want complete control over both input
+filenames rather than using the interactive prompt in `baseData()`.
+
+```{r workflow-combine-explicit}
+# Read and process both reports.
+epitrax <- epitrax_import(
+  .file = epitrax_file,
+  .include.all = FALSE,
+  .use_cache = FALSE
+)
+
+nbs <- nbs_import(
+  .file = nbs_file,
+  .include.all = FALSE,
+  .use_cache = FALSE
+)
+
+# Convert EpiTrax to the NBS schema.
+epitrax_nbs <- epitrax_2_nbs_format(
+  et = epitrax,
+  nbs = nbs
+)
+
+# Keep the same columns and identify the source system.
+common_fields <- intersect(names(nbs), names(epitrax_nbs))
+
+epitrax_nbs <- epitrax_nbs[, common_fields, drop = FALSE]
+nbs <- nbs[, common_fields, drop = FALSE]
+
+combined <- dplyr::bind_rows(
+  EpiTrax = epitrax_nbs,
+  NBS = nbs,
+  .id = "dataset"
+)
+
+# Apply the same cross-system duplicate key used by baseData().
+combined <- dplyr::distinct(
+  combined,
+  Person.Name,
+  Birth.Time,
+  Condition,
+  Event.Date,
+  .keep_all = TRUE
+)
+```
+
+Because EpiTrax is bound first, this example retains the EpiTrax record
+when the duplicate key matches in both sources. Review the duplicate key
+before changing its fields or source precedence.
+
+### Routine combined-data workflow
+
+For routine production work, use the maintained NBS base for historical
+records and select the current year-to-date EpiTrax export when prompted:
+
+```{r workflow-routine}
+nbs_base_file <- file.path(
+  paths$communicable,
+  "NBS",
+  "nbs_base.parquet"
+)
+
+cases <- baseData(
+  .base = nbs_base_file,
+  .chooseNew = TRUE
+)
+
+table(cases$dataset, useNA = "ifany")
+range(cases$Event.Date, na.rm = TRUE)
+```
+
+This workflow follows the package's intended division of data:
+
+- the NBS base supplies finalized historical records; and
+- the selected EpiTrax report supplies current records.
+
+After NBS data for a period are finalized, use `baseNBSUpdate()` to
+replace that period in the maintained base. Use `construct_nbs_base()`
+only when the base must be rebuilt from all available NBS exports.
+
+## Validation checklist
+
+Before using the combined data in analysis or reporting, verify:
+
+- the source filenames and report templates are correct;
+- the expected case statuses were included;
+- event dates cover the intended reporting period;
+- missing diagnosis counties have been reviewed;
+- condition names were translated as expected;
+- the number of records removed as duplicates is plausible;
+- `dataset` counts are plausible for the selected period; and
+- the NBS base backup exists before any update or rebuild.
+
+The import functions standardize known fields, but they cannot determine
+whether the selected export used the correct report parameters or date
+range. That validation remains part of the analyst's workflow.
